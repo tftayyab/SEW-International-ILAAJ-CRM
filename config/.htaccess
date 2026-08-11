@@ -1,0 +1,4 @@
+# Deny direct access to config if served from web root parent
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>

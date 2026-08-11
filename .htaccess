@@ -1,0 +1,8 @@
+# Apache helpers (optional)
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Block direct web access to sensitive folders
+  RewriteRule ^(config|includes|lib|vendor|uploads)/ - [F,L]
+</IfModule>

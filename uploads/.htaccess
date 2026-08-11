@@ -1,0 +1,4 @@
+# Protect temp uploads from direct execution
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
