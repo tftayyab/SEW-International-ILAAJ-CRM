@@ -9,7 +9,7 @@ require ROOT_PATH . '/includes/header.php';
 ?>
 <div class="page-header">
     <div>
-        <h1>Patients</h1>
+        <h2 style="margin:0">Patient ledger</h2>
         <p>Search and filter update as you type.</p>
     </div>
     <button type="button" class="btn" id="btnAddPatient">+ Add patient</button>

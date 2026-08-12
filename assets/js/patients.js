@@ -1,5 +1,5 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, truncate, openModal, closeModal, confirmDeletePhrase, debounce, icons } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, formatDate, truncate, openModal, closeModal, confirmDeletePhrase, debounce, icons, ImageCache, bindAvatarPicker, uploadPatientAvatar } = AppUtil;
 
   let state = { page: 1, sort: 'last_activity', dir: 'DESC' };
 
@@ -78,16 +78,21 @@
         </table>
       </div>
       <div class="mobile-list">
-        ${rows.map((p) => `
-          <div class="mobile-card row-link" data-href="${APP.baseUrl}/pages/patient.php?id=${p.id}">
-            <h3>${escapeHtml(p.name)}</h3>
-            <div class="mobile-meta">
-              <div>${escapeHtml(p.number)} · ${escapeHtml(p.city || '—')}</div>
-              <div>${escapeHtml(truncate(p.last_message || 'No messages', 80))}</div>
+        ${rows.map((p, i) => {
+          const tones = ['tone-peach', 'tone-mint', 'tone-sky', 'tone-yellow'];
+          const dateText = p.last_activity ? escapeHtml(formatDate(p.last_activity)) : 'No activity';
+          return `
+          <div class="info-card mobile-card ${tones[i % tones.length]} row-link" data-href="${APP.baseUrl}/pages/patient.php?id=${p.id}">
+            <div class="info-card__top">
+              <span class="info-card__status is-info">Patient</span>
+              <span class="info-card__date">${dateText}</span>
             </div>
-            <div style="margin-top:0.75rem">${actionBtns(p)}</div>
-          </div>
-        `).join('')}
+            <h3 class="info-card__name">${escapeHtml(p.name)}</h3>
+            ${p.mother_name ? `<p class="info-card__sub">Mother: ${escapeHtml(p.mother_name)}</p>` : `<p class="info-card__sub">${escapeHtml(p.number)}${p.city ? ' · ' + escapeHtml(p.city) : ''}</p>`}
+            <p class="info-card__msg">${escapeHtml(truncate(p.last_message || 'No messages yet.', 220))}</p>
+            <div class="info-card__actions" onclick="event.stopPropagation()">${actionBtns(p)}</div>
+          </div>`;
+        }).join('')}
       </div>`;
 
     $all('.row-link', wrap).forEach((row) => {
@@ -131,26 +136,48 @@
 
   function patientFormHtml(p) {
     p = p || {};
+    const isEdit = !!p.id;
     return `
       <div class="modal-header">
-        <h2>${p.id ? 'Edit patient' : 'Add patient'}</h2>
+        <div>
+          <h2>${isEdit ? 'Edit patient' : 'Add patient'}</h2>
+          <p class="modal-sub">${isEdit ? 'Update details and optionally change the profile photo.' : 'Fill in the basics. You can add a profile photo now.'}</p>
+        </div>
         <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
       </div>
       <div class="modal-body">
         <form id="patientForm" class="form-grid">
           <input type="hidden" name="id" value="${p.id || ''}">
-          <div class="field"><label>Patient name *</label><input name="name" required value="${escapeHtml(p.name || '')}"></div>
-          <div class="field"><label>Mother's name</label><input name="mother_name" value="${escapeHtml(p.mother_name || '')}"></div>
-          <div class="field"><label>Number *</label><input name="number" required value="${escapeHtml(p.number || '')}"></div>
-          <div class="field"><label>Country</label><input name="country" value="${escapeHtml(p.country || '')}"></div>
-          <div class="field"><label>City</label><input name="city" value="${escapeHtml(p.city || '')}"></div>
-          <div class="field"><label>Occupation</label><input name="occupation" value="${escapeHtml(p.occupation || '')}"></div>
-          <div class="field full"><label>Notes</label><textarea name="notes">${escapeHtml(p.notes || '')}</textarea></div>
+
+          <div class="field full">
+            <div class="modal-section-label">Profile photo</div>
+            <div class="avatar-picker">
+              <div class="avatar-picker__preview" id="avatarPreview">${isEdit && p.profile_image_id ? `<img data-image-id="${p.profile_image_id}" class="img-loading" alt="">` : 'No<br>photo'}</div>
+              <div class="avatar-picker__meta">
+                <strong>${isEdit ? 'Change profile picture' : 'Add profile picture'}</strong>
+                <p>JPG, PNG, GIF or WebP. Optional — you can also add photos later from the gallery.</p>
+                <div class="avatar-picker__actions">
+                  <button type="button" class="btn btn-sm btn-secondary" id="avatarChoose">Choose photo</button>
+                  <button type="button" class="btn btn-sm btn-ghost" id="avatarClear" hidden>Remove</button>
+                </div>
+              </div>
+              <input type="file" id="avatarFile" accept="image/jpeg,image/png,image/gif,image/webp">
+            </div>
+          </div>
+
+          <div class="field full"><div class="modal-section-label">Details</div></div>
+          <div class="field"><label>Patient name *</label><input name="name" required autocomplete="name" value="${escapeHtml(p.name || '')}" placeholder="Full name"></div>
+          <div class="field"><label>Mother's name</label><input name="mother_name" value="${escapeHtml(p.mother_name || '')}" placeholder="Optional"></div>
+          <div class="field"><label>Number *</label><input name="number" required inputmode="tel" value="${escapeHtml(p.number || '')}" placeholder="Phone number"></div>
+          <div class="field"><label>Occupation</label><input name="occupation" value="${escapeHtml(p.occupation || '')}" placeholder="Optional"></div>
+          <div class="field"><label>City</label><input name="city" value="${escapeHtml(p.city || '')}" placeholder="Optional"></div>
+          <div class="field"><label>Country</label><input name="country" value="${escapeHtml(p.country || '')}" placeholder="Optional"></div>
+          <div class="field full"><label>Notes</label><textarea name="notes" placeholder="Private notes for the editor…">${escapeHtml(p.notes || '')}</textarea></div>
         </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-        <button type="button" class="btn" id="savePatientBtn">Save</button>
+        <button type="button" class="btn" id="savePatientBtn">${isEdit ? 'Save changes' : 'Create patient'}</button>
       </div>`;
   }
 
@@ -161,21 +188,52 @@
       patient = res.patient;
     }
     openModal(patientFormHtml(patient));
-    $('#savePatientBtn').addEventListener('click', async () => {
-      const data = Object.fromEntries(new FormData($('#patientForm')).entries());
+    const avatar = bindAvatarPicker($('#modalRoot'));
+    const existingImg = $('#avatarPreview img');
+    if (existingImg && patient && patient.profile_image_id) {
+      ImageCache.load(patient.profile_image_id, existingImg);
+    }
+
+    const saveBtn = $('#savePatientBtn');
+    saveBtn.addEventListener('click', async () => {
+      const form = $('#patientForm');
+      if (!form.reportValidity()) return;
+      const data = Object.fromEntries(new FormData(form).entries());
+      const file = avatar.getFile();
       try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = data.id ? 'Saving…' : 'Creating…';
+
         if (data.id) {
           await api('patients.php?action=update', { method: 'POST', body: data });
-          toast('Patient updated.');
+          if (file) {
+            saveBtn.textContent = 'Uploading photo…';
+            await uploadPatientAvatar(data.id, file);
+          }
+          toast(file ? 'Patient and photo updated.' : 'Patient updated.');
           closeModal();
           await load();
         } else {
           const created = await api('patients.php?action=create', { method: 'POST', body: data });
-          toast('Patient created.');
+          if (file) {
+            saveBtn.textContent = 'Uploading photo…';
+            try {
+              await uploadPatientAvatar(created.id, file);
+            } catch (upErr) {
+              toast('Patient created, but photo upload failed: ' + upErr.message);
+              window.location.href = APP.baseUrl + '/pages/patient.php?id=' + created.id;
+              return;
+            }
+          }
+          toast(file ? 'Patient created with profile photo.' : 'Patient created.');
           closeModal();
           window.location.href = APP.baseUrl + '/pages/patient.php?id=' + created.id;
         }
-      } catch (e) { toast(e.message); }
+      } catch (e) {
+        toast(e.message);
+        saveBtn.disabled = false;
+        saveBtn.textContent = data.id ? 'Save changes' : 'Create patient';
+      }
     });
   }
 

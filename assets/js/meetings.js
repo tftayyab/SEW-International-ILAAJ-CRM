@@ -16,14 +16,13 @@
     box.innerHTML = `
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>Name</th><th>Date</th><th>Location</th><th>Workers</th><th>Patients</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Date</th><th>Location</th><th>Patients</th><th class="no-sort"></th></tr></thead>
           <tbody>
             ${res.data.map((m) => `
               <tr class="row-link" data-href="${APP.baseUrl}/pages/meeting.php?id=${m.id}">
                 <td><div class="cell-primary">${escapeHtml(m.name)}</div></td>
                 <td>${escapeHtml(formatDate(m.meeting_date) || '—')}</td>
                 <td>${escapeHtml(m.location || '—')}</td>
-                <td>${m.workers_attended || 0}/${m.workers_count || 0}</td>
                 <td>${m.patients_attended || 0}/${m.patients_count || 0}</td>
                 <td>
                   <div class="icon-actions" onclick="event.stopPropagation()">

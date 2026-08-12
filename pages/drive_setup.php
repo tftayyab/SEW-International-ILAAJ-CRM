@@ -25,7 +25,7 @@ require ROOT_PATH . '/includes/header.php';
 
 <div class="page-header">
     <div>
-        <h1>Google Drive Setup</h1>
+        <h2 style="margin:0">Storage connection</h2>
         <p>OAuth + refresh token — everything stored in <code>.env</code> for local and deploy.</p>
     </div>
 </div>

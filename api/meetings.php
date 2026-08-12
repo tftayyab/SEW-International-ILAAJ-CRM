@@ -34,12 +34,8 @@ try {
                 'location' => input('location'),
                 'description' => input('description'),
                 'notes' => input('notes'),
-                'worker_ids' => input('worker_ids', []) ?: [],
                 'patient_ids' => input('patient_ids', []) ?: [],
             ];
-            if (!is_array($data['worker_ids'])) {
-                $data['worker_ids'] = [];
-            }
             if (!is_array($data['patient_ids'])) {
                 $data['patient_ids'] = [];
             }
@@ -65,12 +61,8 @@ try {
                 'location' => input('location'),
                 'description' => input('description'),
                 'notes' => input('notes'),
-                'worker_ids' => input('worker_ids', []) ?: [],
                 'patient_ids' => input('patient_ids', []) ?: [],
             ];
-            if (!is_array($data['worker_ids'])) {
-                $data['worker_ids'] = [];
-            }
             if (!is_array($data['patient_ids'])) {
                 $data['patient_ids'] = [];
             }
@@ -85,22 +77,13 @@ try {
         case 'attendance':
             require_csrf();
             $meetingId = (int) input('meeting_id');
-            $type = (string) input('type'); // worker | patient
             $personId = (int) input('person_id');
             $attended = !empty(input('attended'));
             if (!MeetingRepository::find($meetingId)) {
                 json_error('Meeting not found.', 404);
             }
-            if ($type === 'worker') {
-                if (!MeetingRepository::setWorkerAttendance($meetingId, $personId, $attended)) {
-                    json_error('Worker not on this meeting.', 404);
-                }
-            } elseif ($type === 'patient') {
-                if (!MeetingRepository::setPatientAttendance($meetingId, $personId, $attended)) {
-                    json_error('Patient not on this meeting.', 404);
-                }
-            } else {
-                json_error('Invalid attendance type.');
+            if (!MeetingRepository::setPatientAttendance($meetingId, $personId, $attended)) {
+                json_error('Patient not on this meeting.', 404);
             }
             json_success(['meeting' => MeetingRepository::find($meetingId)]);
             break;
@@ -108,7 +91,6 @@ try {
         case 'attendance_bulk':
             require_csrf();
             $meetingId = (int) input('meeting_id');
-            $type = (string) input('type'); // worker | patient
             $attended = !empty(input('attended'));
             $ids = input('person_ids');
             if (!is_array($ids)) {
@@ -117,13 +99,7 @@ try {
             if (!MeetingRepository::find($meetingId)) {
                 json_error('Meeting not found.', 404);
             }
-            if ($type === 'worker') {
-                MeetingRepository::setWorkerAttendanceBulk($meetingId, $attended, $ids);
-            } elseif ($type === 'patient') {
-                MeetingRepository::setPatientAttendanceBulk($meetingId, $attended, $ids);
-            } else {
-                json_error('Invalid attendance type.');
-            }
+            MeetingRepository::setPatientAttendanceBulk($meetingId, $attended, $ids);
             json_success(['meeting' => MeetingRepository::find($meetingId)]);
             break;
 

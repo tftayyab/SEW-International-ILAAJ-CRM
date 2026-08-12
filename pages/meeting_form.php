@@ -22,7 +22,7 @@ require ROOT_PATH . '/includes/header.php';
 <div class="page-header">
     <div>
         <p><a href="<?= e(base_url('pages/meetings.php')) ?>">← Meetings</a></p>
-        <h1><?= $meeting ? 'Edit meeting' : 'Create meeting' ?></h1>
+        <h2 style="margin:0"><?= $meeting ? 'Edit meeting details' : 'New meeting details' ?></h2>
         <p>Choose who is <strong>expected</strong> to attend. After saving, open the meeting to mark who was actually present.</p>
     </div>
 </div>
@@ -54,29 +54,16 @@ require ROOT_PATH . '/includes/header.php';
     </div>
 </form>
 
-<div class="panel-split" style="margin-top:1rem">
-    <div class="card">
-        <div class="page-header" style="margin-bottom:0.5rem">
-            <h2 style="margin:0;font-size:1.1rem">Expected workers</h2>
-            <div class="actions">
-                <button type="button" class="btn btn-sm btn-secondary" id="btnPickWorkers">Select</button>
-                <button type="button" class="btn btn-sm" id="btnAddWorkerModal">+ New worker</button>
-            </div>
+<div class="card" style="margin-top:1rem">
+    <div class="page-header" style="margin-bottom:0.5rem">
+            <h2 style="margin:0">Expected patients</h2>
+        <div class="actions">
+            <button type="button" class="btn btn-sm btn-secondary" id="btnPickPatients">Select</button>
+            <button type="button" class="btn btn-sm" id="btnAddPatientModal">+ New patient</button>
         </div>
-        <div id="selectedWorkers" class="attendee-summary"></div>
-        <p class="muted" id="workersEmpty">No workers selected yet.</p>
     </div>
-    <div class="card">
-        <div class="page-header" style="margin-bottom:0.5rem">
-            <h2 style="margin:0;font-size:1.1rem">Expected patients</h2>
-            <div class="actions">
-                <button type="button" class="btn btn-sm btn-secondary" id="btnPickPatients">Select</button>
-                <button type="button" class="btn btn-sm" id="btnAddPatientModal">+ New patient</button>
-            </div>
-        </div>
-        <div id="selectedPatients" class="attendee-summary"></div>
-        <p class="muted" id="patientsEmpty">No patients selected yet.</p>
-    </div>
+    <div id="selectedPatients" class="attendee-summary"></div>
+    <p class="muted" id="patientsEmpty">No patients selected yet.</p>
 </div>
 
 <div class="actions" style="margin-top:1.25rem">
@@ -86,11 +73,6 @@ require ROOT_PATH . '/includes/header.php';
 
 <script>
   window.MEETING_INITIAL = <?= json_encode([
-      'workers' => array_map(static fn($w) => [
-          'id' => (int) $w['id'],
-          'name' => $w['name'],
-          'phone' => $w['phone'] ?? '',
-      ], $meeting['workers'] ?? []),
       'patients' => array_map(static fn($p) => [
           'id' => (int) $p['id'],
           'name' => $p['name'],

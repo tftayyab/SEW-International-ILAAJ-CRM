@@ -1,30 +1,17 @@
 (function () {
   const { $, $all, api, toast, escapeHtml, openModal, closeModal, debounce } = AppUtil;
 
-  const selectedWorkers = new Map();
   const selectedPatients = new Map();
 
-  (window.MEETING_INITIAL?.workers || []).forEach((w) => selectedWorkers.set(Number(w.id), w));
   (window.MEETING_INITIAL?.patients || []).forEach((p) => selectedPatients.set(Number(p.id), p));
 
   function renderChips() {
-    const wBox = $('#selectedWorkers');
     const pBox = $('#selectedPatients');
-    const wEmpty = $('#workersEmpty');
     const pEmpty = $('#patientsEmpty');
 
-    const workers = [...selectedWorkers.values()];
     const patients = [...selectedPatients.values()];
-
-    wEmpty.hidden = workers.length > 0;
     pEmpty.hidden = patients.length > 0;
 
-    wBox.innerHTML = workers.map((w) => `
-      <span class="chip">
-        <span class="chip-label">${escapeHtml(w.name)}</span>
-        ${w.phone ? `<span class="chip-meta">${escapeHtml(w.phone)}</span>` : ''}
-        <button type="button" data-rm-w="${w.id}" aria-label="Remove">×</button>
-      </span>`).join('');
     pBox.innerHTML = patients.map((p) => `
       <span class="chip">
         <span class="chip-label">${escapeHtml(p.name)}</span>
@@ -32,12 +19,6 @@
         <button type="button" data-rm-p="${p.id}" aria-label="Remove">×</button>
       </span>`).join('');
 
-    $all('[data-rm-w]', wBox).forEach((btn) => {
-      btn.addEventListener('click', () => {
-        selectedWorkers.delete(Number(btn.dataset.rmW));
-        renderChips();
-      });
-    });
     $all('[data-rm-p]', pBox).forEach((btn) => {
       btn.addEventListener('click', () => {
         selectedPatients.delete(Number(btn.dataset.rmP));
@@ -46,103 +27,23 @@
     });
   }
 
-  async function openWorkerPicker() {
-    const res = await api('workers.php?action=list');
-    openModal(`
-      <div class="modal-header"><h2>Select expected workers</h2>
-        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button></div>
-      <div class="modal-body">
-        <div class="picker-toolbar">
-          <input type="search" id="workerFilterQ" class="picker-search" placeholder="Filter by name or phone…" autocomplete="off">
-          <span class="picker-count muted" id="workerPickCount"></span>
-        </div>
-        <div class="picker-list" id="workerPickList">
-          ${res.workers.map((w) => `
-            <label class="picker-row">
-              <input type="checkbox" value="${w.id}" data-name="${escapeHtml(w.name)}" data-phone="${escapeHtml(w.phone || '')}" ${selectedWorkers.has(Number(w.id)) ? 'checked' : ''}>
-              <span class="picker-main">
-                <strong>${escapeHtml(w.name)}</strong>
-                <span class="picker-sub">${w.phone ? escapeHtml(w.phone) : 'No phone'}</span>
-              </span>
-            </label>`).join('') || '<div class="muted">No workers yet. Use + New worker.</div>'}
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-        <button type="button" class="btn" id="applyWorkers">Done</button>
-      </div>
-    `, { large: true });
-
-    const list = $('#workerPickList');
-    const countEl = $('#workerPickCount');
-    function refreshCount() {
-      const visible = $all('.picker-row', list).filter((r) => r.style.display !== 'none');
-      const checked = $all('input:checked', list).length;
-      countEl.textContent = checked + ' selected · ' + visible.length + ' shown';
-    }
-    refreshCount();
-
-    $('#workerFilterQ').addEventListener('input', debounce((e) => {
-      const q = e.target.value.toLowerCase().trim();
-      $all('.picker-row', list).forEach((row) => {
-        row.style.display = !q || row.textContent.toLowerCase().includes(q) ? '' : 'none';
-      });
-      refreshCount();
-    }, 120));
-    list.addEventListener('change', refreshCount);
-
-    $('#applyWorkers').addEventListener('click', () => {
-      selectedWorkers.clear();
-      $all('#workerPickList input:checked').forEach((cb) => {
-        selectedWorkers.set(Number(cb.value), {
-          id: Number(cb.value),
-          name: cb.dataset.name,
-          phone: cb.dataset.phone || ''
-        });
-      });
-      closeModal();
-      renderChips();
-    });
-  }
-
-  function openAddWorker() {
-    openModal(`
-      <div class="modal-header"><h2>Add worker</h2>
-        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button></div>
-      <div class="modal-body">
-        <form id="newWorkerForm">
-          <div class="field"><label>Name *</label><input name="name" required autofocus></div>
-          <div class="field" style="margin-top:0.75rem"><label>Phone</label><input name="phone"></div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-        <button type="button" class="btn" id="saveNewWorker">Save &amp; select</button>
-      </div>`);
-    $('#saveNewWorker').addEventListener('click', async () => {
-      const data = Object.fromEntries(new FormData($('#newWorkerForm')).entries());
-      try {
-        const res = await api('workers.php?action=create', { method: 'POST', body: data });
-        selectedWorkers.set(res.id, { id: res.id, name: res.worker.name, phone: res.worker.phone || '' });
-        closeModal();
-        renderChips();
-        toast('Worker added.');
-      } catch (e) { toast(e.message); }
-    });
-  }
-
   function openAddPatient() {
     openModal(`
-      <div class="modal-header"><h2>Add patient</h2>
-        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button></div>
+      <div class="modal-header">
+        <div>
+          <h2>Add patient</h2>
+          <p class="modal-sub">Quick add — then select them for this meeting.</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
+      </div>
       <div class="modal-body">
         <form id="newPatientForm" class="form-grid">
-          <div class="field"><label>Patient name *</label><input name="name" required autofocus></div>
-          <div class="field"><label>Mother's name</label><input name="mother_name"></div>
-          <div class="field"><label>Number *</label><input name="number" required></div>
-          <div class="field"><label>Country</label><input name="country"></div>
-          <div class="field"><label>City</label><input name="city"></div>
-          <div class="field"><label>Occupation</label><input name="occupation"></div>
+          <div class="field"><label>Patient name *</label><input name="name" required autofocus placeholder="Full name"></div>
+          <div class="field"><label>Mother's name</label><input name="mother_name" placeholder="Optional"></div>
+          <div class="field"><label>Number *</label><input name="number" required inputmode="tel" placeholder="Phone number"></div>
+          <div class="field"><label>Occupation</label><input name="occupation" placeholder="Optional"></div>
+          <div class="field"><label>City</label><input name="city" placeholder="Optional"></div>
+          <div class="field"><label>Country</label><input name="country" placeholder="Optional"></div>
         </form>
       </div>
       <div class="modal-footer">
@@ -150,7 +51,9 @@
         <button type="button" class="btn" id="saveNewPatient">Save &amp; select</button>
       </div>`);
     $('#saveNewPatient').addEventListener('click', async () => {
-      const data = Object.fromEntries(new FormData($('#newPatientForm')).entries());
+      const form = $('#newPatientForm');
+      if (!form.reportValidity()) return;
+      const data = Object.fromEntries(new FormData(form).entries());
       try {
         const res = await api('patients.php?action=create', { method: 'POST', body: data });
         const p = res.patient;
@@ -178,8 +81,13 @@
 
     const first = await loadPatients({});
     openModal(`
-      <div class="modal-header"><h2>Select expected patients</h2>
-        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button></div>
+      <div class="modal-header">
+        <div>
+          <h2>Select expected patients</h2>
+          <p class="modal-sub">Search and tick who should attend this meeting.</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
+      </div>
       <div class="modal-body">
         <div class="picker-filters" id="patPickFilters">
           <div class="field field-grow"><label>Search</label><input name="q" type="search" placeholder="Name, number, city…" autocomplete="off"></div>
@@ -291,14 +199,11 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     renderChips();
-    $('#btnPickWorkers').addEventListener('click', () => openWorkerPicker().catch((e) => toast(e.message)));
-    $('#btnAddWorkerModal').addEventListener('click', openAddWorker);
     $('#btnPickPatients').addEventListener('click', () => openPatientPicker().catch((e) => toast(e.message)));
     $('#btnAddPatientModal').addEventListener('click', openAddPatient);
     $('#btnSaveMeeting').addEventListener('click', async () => {
       const form = $('#meetingPageForm');
       const data = Object.fromEntries(new FormData(form).entries());
-      data.worker_ids = [...selectedWorkers.keys()];
       data.patient_ids = [...selectedPatients.keys()];
       try {
         if (data.id && Number(data.id) > 0) {

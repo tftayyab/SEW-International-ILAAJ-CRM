@@ -91,6 +91,64 @@ class PatientRepository
         return ['data' => $rows, 'pagination' => $pager];
     }
 
+    /**
+     * Patients whose most recent message came from the patient (Ameer Sahab hasn't replied yet).
+     * Ordered by latest patient message first. Returns rows with `last_message`,
+     * `last_message_date`, `last_activity`, and profile image info.
+     */
+    public static function pendingResponses(array $filters = []): array
+    {
+        $where = ['p.is_archived = 0'];
+        $params = [];
+
+        if (!empty($filters['q'])) {
+            $q = '%' . $filters['q'] . '%';
+            $where[] = '(p.name LIKE ? OR p.mother_name LIKE ? OR p.number LIKE ?)';
+            array_push($params, $q, $q, $q);
+        }
+
+        // Sub-select picks each patient's most recent message id using the same ordering as elsewhere.
+        // Then we join and filter by sender_type = 'patient'.
+        $lastMsgId = "(SELECT m.id FROM messages m WHERE m.patient_id = p.id
+            ORDER BY m.message_date IS NULL, m.message_date DESC, m.import_order DESC, m.id DESC
+            LIMIT 1)";
+
+        $whereSql = implode(' AND ', $where);
+
+        $countSql = "SELECT COUNT(*)
+            FROM patients p
+            JOIN messages last_msg ON last_msg.id = {$lastMsgId}
+            WHERE {$whereSql} AND last_msg.sender_type = 'patient'";
+        $countStmt = db()->prepare($countSql);
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        $page = (int) ($filters['page'] ?? 1);
+        $perPage = (int) ($filters['per_page'] ?? 24);
+        $pager = paginate($total, $page, $perPage);
+
+        $sql = "SELECT p.id, p.name, p.mother_name,
+            last_msg.message_text AS last_message,
+            last_msg.message_date AS last_message_date,
+            last_msg.created_at AS last_message_created_at,
+            COALESCE(last_msg.message_date, DATE(last_msg.created_at)) AS last_activity,
+            (SELECT pi.id FROM patient_images pi WHERE pi.patient_id = p.id AND pi.is_profile_picture = 1 LIMIT 1) AS profile_image_id,
+            (SELECT pi.image_url FROM patient_images pi WHERE pi.patient_id = p.id AND pi.is_profile_picture = 1 LIMIT 1) AS profile_image_url
+            FROM patients p
+            JOIN messages last_msg ON last_msg.id = {$lastMsgId}
+            WHERE {$whereSql} AND last_msg.sender_type = 'patient'
+            ORDER BY last_msg.message_date IS NULL,
+                     last_msg.message_date DESC,
+                     last_msg.import_order DESC,
+                     last_msg.id DESC
+            LIMIT {$pager['per_page']} OFFSET {$pager['offset']}";
+        $stmt = db()->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        return ['data' => $rows, 'pagination' => $pager];
+    }
+
     public static function findByNumber(string $number): array
     {
         $stmt = db()->prepare('SELECT p.*, 

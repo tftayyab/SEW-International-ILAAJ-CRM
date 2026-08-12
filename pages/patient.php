@@ -26,7 +26,7 @@ require ROOT_PATH . '/includes/header.php';
 <div class="page-header">
     <div>
         <p><a href="<?= e(base_url('pages/patients.php')) ?>">← Patients</a></p>
-        <h1 id="patientName"><?= e($patient['name']) ?></h1>
+        <h2 id="patientName" style="margin:0"><?= e($patient['name']) ?></h2>
     </div>
     <div class="actions">
         <button type="button" class="btn btn-ameer" id="btnSendToAmeer">Present to Ameer Sahab</button>
@@ -64,7 +64,7 @@ require ROOT_PATH . '/includes/header.php';
 
 <div class="card" style="margin-top:1rem">
     <div class="page-header" style="margin-bottom:0.75rem">
-        <h2 style="margin:0;font-size:1.15rem">Conversation</h2>
+        <h2 style="margin:0">Conversation</h2>
         <button type="button" class="btn btn-sm" id="btnAddMessage">+ Add message</button>
     </div>
     <div id="conversation" class="conversation"></div>

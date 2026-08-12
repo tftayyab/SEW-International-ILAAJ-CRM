@@ -13,7 +13,7 @@ require ROOT_PATH . '/includes/header.php';
 <div id="advisorListView">
     <div class="page-header">
         <div>
-            <h1>Patients</h1>
+            <h2 style="margin:0;font-family:var(--font-read);font-size:1.15rem">Patient roster</h2>
             <p>Select a patient to read the conversation.</p>
         </div>
     </div>
@@ -25,7 +25,7 @@ require ROOT_PATH . '/includes/header.php';
             <span class="muted" style="font-size:0.85rem">Updates as you type</span>
         </div>
     </div>
-    <div id="advisorCards" class="patient-cards"></div>
+    <div id="advisorCards" class="info-grid"></div>
     <div id="advisorPagination" class="pagination"></div>
 </div>
 
@@ -33,7 +33,7 @@ require ROOT_PATH . '/includes/header.php';
     <div class="page-header">
         <div>
             <button type="button" class="btn btn-secondary btn-sm" id="btnBackToList">← All patients</button>
-            <h1 id="advName" style="margin-top:0.75rem"></h1>
+            <h2 id="advName" style="margin-top:0.75rem;font-family:var(--font-read);font-size:1.35rem"></h2>
         </div>
         <a class="btn btn-secondary" id="btnAdvGallery" hidden href="#">Open gallery</a>
     </div>

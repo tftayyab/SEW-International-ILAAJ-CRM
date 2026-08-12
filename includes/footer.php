@@ -1,4 +1,9 @@
+    <footer class="app-footer">
+        <span>ILAAJ CRM</span>
+        <span>SEW International</span>
+    </footer>
 </main>
+</div>
 <div id="toast" class="toast" hidden></div>
 <div id="modalRoot"></div>
 <script src="<?= e(asset_url('js/app.js')) ?>"></script>

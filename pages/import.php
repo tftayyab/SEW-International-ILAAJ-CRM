@@ -9,7 +9,7 @@ require ROOT_PATH . '/includes/header.php';
 ?>
 <div class="page-header">
     <div>
-        <h1>Import Excel</h1>
+        <h2 style="margin:0">Sheet importer</h2>
         <p>Upload organizational Excel/CSV files. Conversations are normalized into individual messages.</p>
     </div>
 </div>

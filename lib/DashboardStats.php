@@ -19,7 +19,14 @@ class DashboardStats
         $patientMessages = (int) $pdo->query("SELECT COUNT(*) FROM messages WHERE sender_type = 'patient'")->fetchColumn();
         $ameerMessages = (int) $pdo->query("SELECT COUNT(*) FROM messages WHERE sender_type = 'ameer_sahab'")->fetchColumn();
 
-        $workers = (int) $pdo->query('SELECT COUNT(*) FROM workers')->fetchColumn();
+        // Patients whose latest message is from the patient (i.e. Ameer Sahab has not replied yet)
+        $pendingReplies = (int) $pdo->query("SELECT COUNT(*) FROM patients p
+            WHERE p.is_archived = 0
+              AND (SELECT m.sender_type FROM messages m
+                    WHERE m.patient_id = p.id
+                    ORDER BY m.message_date IS NULL, m.message_date DESC, m.import_order DESC, m.id DESC
+                    LIMIT 1) = 'patient'")->fetchColumn();
+
         $meetings = (int) $pdo->query('SELECT COUNT(*) FROM meetings')->fetchColumn();
 
         $withImages = (int) $pdo->query('SELECT COUNT(DISTINCT patient_id) FROM patient_images')->fetchColumn();
@@ -48,7 +55,7 @@ class DashboardStats
                 'messages' => $totalMessages,
                 'patient_messages' => $patientMessages,
                 'ameer_messages' => $ameerMessages,
-                'workers' => $workers,
+                'pending_replies' => $pendingReplies,
                 'meetings' => $meetings,
                 'with_images' => $withImages,
                 'without_images' => $withoutImages,

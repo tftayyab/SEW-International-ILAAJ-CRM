@@ -1,6 +1,6 @@
 <?php
 /**
- * Shared page header
+ * Shared page header — sidebar shell + brand/date top bar.
  * @var string $pageTitle
  * @var string $bodyClass
  * @var string $activeNav
@@ -9,6 +9,10 @@ $pageTitle = $pageTitle ?? 'ILAAJ CRM';
 $bodyClass = $bodyClass ?? '';
 $activeNav = $activeNav ?? '';
 $role = current_role();
+
+$brandLabel = 'SEW International';
+$roleLabel = is_ameer() ? 'Advisor View' : (is_editor() ? 'Editor Console' : '');
+$today = date('j M Y');
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,7 +21,7 @@ $role = current_role();
     <title><?= e($pageTitle) ?> — ILAAJ CRM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= e(asset_url('css/style.css')) ?>">
     <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
     <script>
@@ -32,8 +36,19 @@ $role = current_role();
     </script>
 </head>
 <body class="<?= e($bodyClass) ?> role-<?= e((string) $role) ?>">
+<div class="app-shell">
 <?php require ROOT_PATH . '/includes/navigation.php'; ?>
-<main class="main-content">
+<main class="main-wrap">
+    <header class="app-topbar">
+        <div class="title-block">
+            <p class="eyebrow"><?= e($brandLabel) ?><?= $roleLabel ? ' &middot; ' . e($roleLabel) : '' ?></p>
+            <h1><?= e($pageTitle) ?></h1>
+        </div>
+        <div class="date-block">
+            <p class="today-label">Today</p>
+            <p class="today-date"><?= e($today) ?></p>
+        </div>
+    </header>
 <?php
 $flash = flash_get();
 if ($flash):

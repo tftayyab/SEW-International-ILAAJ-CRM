@@ -1,5 +1,5 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, openModal, closeModal, confirmDeletePhrase, ImageCache } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, formatDate, openModal, closeModal, confirmDeletePhrase, ImageCache, bindAvatarPicker, uploadPatientAvatar } = AppUtil;
   const patientId = parseInt($('#patientHero').dataset.patientId, 10);
 
   async function loadMessages() {
@@ -40,8 +40,13 @@
   function openMessageForm(msg) {
     msg = msg || { sender_type: 'patient', message_date: new Date().toISOString().slice(0, 10) };
     openModal(`
-      <div class="modal-header"><h2>${msg.id ? 'Edit message' : 'Add message'}</h2>
-        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button></div>
+      <div class="modal-header">
+        <div>
+          <h2>${msg.id ? 'Edit message' : 'Add message'}</h2>
+          <p class="modal-sub">${msg.id ? 'Update this conversation entry.' : 'Add a new message to this patient’s thread.'}</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
+      </div>
       <div class="modal-body">
         <form id="msgForm" class="form-grid">
           <input type="hidden" name="id" value="${msg.id || ''}">
@@ -52,16 +57,18 @@
             </select>
           </div>
           <div class="field"><label>Date</label><input type="date" name="message_date" value="${escapeHtml(msg.message_date || '')}"></div>
-          <div class="field full"><label>Message</label><textarea name="message_text" required>${escapeHtml(msg.message_text || '')}</textarea></div>
+          <div class="field full"><label>Message</label><textarea name="message_text" required placeholder="Write the message…">${escapeHtml(msg.message_text || '')}</textarea></div>
         </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-        <button type="button" class="btn" id="saveMsg">Save</button>
+        <button type="button" class="btn" id="saveMsg">Save message</button>
       </div>
     `);
     $('#saveMsg').addEventListener('click', async () => {
-      const data = Object.fromEntries(new FormData($('#msgForm')).entries());
+      const form = $('#msgForm');
+      if (!form.reportValidity()) return;
+      const data = Object.fromEntries(new FormData(form).entries());
       data.patient_id = patientId;
       try {
         if (data.id) await api('messages.php?action=update', { method: 'POST', body: data });
@@ -110,32 +117,72 @@
     api('patients.php?action=get&id=' + patientId).then((res) => {
       const p = res.patient;
       openModal(`
-        <div class="modal-header"><h2>Edit patient</h2>
-          <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button></div>
+        <div class="modal-header">
+          <div>
+            <h2>Edit patient</h2>
+            <p class="modal-sub">Update details and optionally change the profile photo.</p>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
+        </div>
         <div class="modal-body">
           <form id="editPatientForm" class="form-grid">
-            <div class="field"><label>Patient name *</label><input name="name" required value="${escapeHtml(p.name)}"></div>
-            <div class="field"><label>Mother's name</label><input name="mother_name" value="${escapeHtml(p.mother_name || '')}"></div>
-            <div class="field"><label>Number *</label><input name="number" required value="${escapeHtml(p.number)}"></div>
-            <div class="field"><label>Country</label><input name="country" value="${escapeHtml(p.country || '')}"></div>
-            <div class="field"><label>City</label><input name="city" value="${escapeHtml(p.city || '')}"></div>
-            <div class="field"><label>Occupation</label><input name="occupation" value="${escapeHtml(p.occupation || '')}"></div>
-            <div class="field full"><label>Notes</label><textarea name="notes">${escapeHtml(p.notes || '')}</textarea></div>
+            <div class="field full">
+              <div class="modal-section-label">Profile photo</div>
+              <div class="avatar-picker">
+                <div class="avatar-picker__preview" id="avatarPreview">${p.profile_image_id ? `<img data-image-id="${p.profile_image_id}" class="img-loading" alt="">` : 'No<br>photo'}</div>
+                <div class="avatar-picker__meta">
+                  <strong>Change profile picture</strong>
+                  <p>JPG, PNG, GIF or WebP. Leave empty to keep the current photo.</p>
+                  <div class="avatar-picker__actions">
+                    <button type="button" class="btn btn-sm btn-secondary" id="avatarChoose">Choose photo</button>
+                    <button type="button" class="btn btn-sm btn-ghost" id="avatarClear" hidden>Remove</button>
+                  </div>
+                </div>
+                <input type="file" id="avatarFile" accept="image/jpeg,image/png,image/gif,image/webp">
+              </div>
+            </div>
+            <div class="field full"><div class="modal-section-label">Details</div></div>
+            <div class="field"><label>Patient name *</label><input name="name" required value="${escapeHtml(p.name)}" placeholder="Full name"></div>
+            <div class="field"><label>Mother's name</label><input name="mother_name" value="${escapeHtml(p.mother_name || '')}" placeholder="Optional"></div>
+            <div class="field"><label>Number *</label><input name="number" required inputmode="tel" value="${escapeHtml(p.number)}" placeholder="Phone number"></div>
+            <div class="field"><label>Occupation</label><input name="occupation" value="${escapeHtml(p.occupation || '')}" placeholder="Optional"></div>
+            <div class="field"><label>City</label><input name="city" value="${escapeHtml(p.city || '')}" placeholder="Optional"></div>
+            <div class="field"><label>Country</label><input name="country" value="${escapeHtml(p.country || '')}" placeholder="Optional"></div>
+            <div class="field full"><label>Notes</label><textarea name="notes" placeholder="Private notes for the editor…">${escapeHtml(p.notes || '')}</textarea></div>
           </form>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-          <button type="button" class="btn" id="savePatient">Save</button>
+          <button type="button" class="btn" id="savePatient">Save changes</button>
         </div>`);
-      $('#savePatient').addEventListener('click', async () => {
-        const data = Object.fromEntries(new FormData($('#editPatientForm')).entries());
+
+      const avatar = bindAvatarPicker($('#modalRoot'));
+      const existingImg = $('#avatarPreview img');
+      if (existingImg && p.profile_image_id) ImageCache.load(p.profile_image_id, existingImg);
+
+      const saveBtn = $('#savePatient');
+      saveBtn.addEventListener('click', async () => {
+        const form = $('#editPatientForm');
+        if (!form.reportValidity()) return;
+        const data = Object.fromEntries(new FormData(form).entries());
         data.id = patientId;
+        const file = avatar.getFile();
         try {
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Saving…';
           await api('patients.php?action=update', { method: 'POST', body: data });
+          if (file) {
+            saveBtn.textContent = 'Uploading photo…';
+            await uploadPatientAvatar(patientId, file);
+          }
           closeModal();
-          toast('Patient updated.');
+          toast(file ? 'Patient and photo updated.' : 'Patient updated.');
           await refreshPatientHeader();
-        } catch (e) { toast(e.message); }
+        } catch (e) {
+          toast(e.message);
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save changes';
+        }
       });
     }).catch((e) => toast(e.message));
   }

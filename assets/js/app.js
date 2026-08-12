@@ -115,6 +115,107 @@
     if (root) root.innerHTML = '';
   }
 
+  /** Wire an avatar picker (#avatarFile + preview + clear). Returns getFile(). */
+  function bindAvatarPicker(root) {
+    root = root || document;
+    const fileInput = $('#avatarFile', root);
+    const preview = $('#avatarPreview', root);
+    const clearBtn = $('#avatarClear', root);
+    const chooseBtn = $('#avatarChoose', root);
+    if (!fileInput || !preview) {
+      return { getFile: () => null };
+    }
+
+    let objectUrl = null;
+    const placeholder = preview.innerHTML;
+
+    function setPreview(file) {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+      if (!file) {
+        preview.innerHTML = placeholder;
+        if (clearBtn) clearBtn.hidden = true;
+        return;
+      }
+      objectUrl = URL.createObjectURL(file);
+      preview.innerHTML = `<img src="${objectUrl}" alt="">`;
+      if (clearBtn) clearBtn.hidden = false;
+    }
+
+    if (chooseBtn) {
+      chooseBtn.addEventListener('click', () => fileInput.click());
+    }
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (file && !String(file.type || '').startsWith('image/')) {
+        toast('Please choose an image file.');
+        fileInput.value = '';
+        setPreview(null);
+        return;
+      }
+      setPreview(file || null);
+    });
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        fileInput.value = '';
+        setPreview(null);
+      });
+    }
+
+    return {
+      getFile: () => (fileInput.files && fileInput.files[0]) || null,
+      clear: () => {
+        fileInput.value = '';
+        setPreview(null);
+      }
+    };
+  }
+
+  /** Wire a .file-drop zone with nested file input. */
+  function bindFileDrop(dropEl) {
+    if (!dropEl) return null;
+    const input = dropEl.querySelector('input[type="file"]');
+    const nameEl = dropEl.querySelector('.file-drop__name');
+    if (!input) return null;
+
+    function showName() {
+      const file = input.files && input.files[0];
+      if (nameEl) nameEl.textContent = file ? file.name : '';
+    }
+
+    input.addEventListener('change', showName);
+    ['dragenter', 'dragover'].forEach((ev) => {
+      dropEl.addEventListener(ev, (e) => {
+        e.preventDefault();
+        dropEl.classList.add('is-dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach((ev) => {
+      dropEl.addEventListener(ev, (e) => {
+        e.preventDefault();
+        dropEl.classList.remove('is-dragover');
+      });
+    });
+    dropEl.addEventListener('drop', (e) => {
+      const files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files.length) {
+        input.files = files;
+        showName();
+      }
+    });
+    return input;
+  }
+
+  async function uploadPatientAvatar(patientId, file, description) {
+    if (!file) return null;
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('patient_id', String(patientId));
+    fd.append('description', description || 'Profile picture');
+    fd.append('is_profile_picture', '1');
+    return api('images.php?action=upload', { method: 'POST', body: fd });
+  }
+
   function confirmDeletePhrase(opts) {
     return new Promise((resolve) => {
       openModal(`
@@ -128,7 +229,9 @@
             <div style="margin-top:0.5rem;white-space:pre-wrap">${escapeHtml(opts.warning || '')}</div>
           </div>
           <p>Type <strong>${escapeHtml(opts.phrase)}</strong> to confirm:</p>
-          <input type="text" id="confirmPhraseInput" autocomplete="off" placeholder="${escapeHtml(opts.phrase)}">
+          <div class="field">
+            <input type="text" id="confirmPhraseInput" autocomplete="off" placeholder="${escapeHtml(opts.phrase)}">
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
@@ -225,13 +328,23 @@
     });
   }
 
-  // Nav toggle
+  // Sidebar toggle (mobile). Also closes on outside click and Escape.
   document.addEventListener('DOMContentLoaded', () => {
     const toggle = $('#navToggle');
     const nav = $('#appNav');
-    if (toggle && nav) {
-      toggle.addEventListener('click', () => nav.classList.toggle('open'));
-    }
+    if (!toggle || !nav) return;
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      nav.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!nav.classList.contains('open')) return;
+      if (nav.contains(e.target) || toggle.contains(e.target)) return;
+      nav.classList.remove('open');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') nav.classList.remove('open');
+    });
   });
 
   function debounce(fn, wait) {
@@ -297,6 +410,7 @@
 
   window.AppUtil = {
     $, $all, toast, api, escapeHtml, formatDate, truncate, openModal, closeModal,
-    confirmDeletePhrase, duplicateNumberPicker, debounce, icons, ImageCache
+    confirmDeletePhrase, duplicateNumberPicker, debounce, icons, ImageCache,
+    bindAvatarPicker, bindFileDrop, uploadPatientAvatar
   };
 })();

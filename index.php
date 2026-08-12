@@ -28,13 +28,14 @@ if (current_role() === ROLE_EDITOR && !isset($_GET['stay'])) {
     <title>ILAAJ CRM — Patient Advisor System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= e(asset_url('css/style.css')) ?>">
 </head>
 <body class="landing-body">
     <div class="landing">
+        <div class="landing-logo" aria-hidden="true">IL</div>
         <header class="landing-header">
-            <p class="landing-eyebrow">SEW International</p>
+            <p class="landing-eyebrow">SEW International &middot; <?= e(date('j M Y')) ?></p>
             <h1 class="landing-brand">ILAAJ CRM</h1>
             <p class="landing-sub">Patient Advisor &amp; Writer Management System</p>
         </header>

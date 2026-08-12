@@ -9,7 +9,7 @@ require ROOT_PATH . '/includes/header.php';
 ?>
 <div class="page-header">
     <div>
-        <h1>Meetings</h1>
+        <h2 style="margin:0">Meeting register</h2>
         <p>Create meetings with expected attendees, then mark who was present.</p>
     </div>
     <button type="button" class="btn" id="btnAddMeeting">+ Create Meeting</button>

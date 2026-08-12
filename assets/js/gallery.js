@@ -1,5 +1,5 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, openModal, closeModal, ImageCache, icons } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, openModal, closeModal, ImageCache, icons, bindFileDrop } = AppUtil;
   const root = $('#galleryRoot');
   const patientId = parseInt(root.dataset.patientId, 10);
   const canEdit = root.dataset.canEdit === '1';
@@ -47,16 +47,24 @@
 
   function editImage(img) {
     openModal(`
-      <div class="modal-header"><h2>Edit photo</h2>
-        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button></div>
+      <div class="modal-header">
+        <div>
+          <h2>Edit photo</h2>
+          <p class="modal-sub">Update the caption or set this as the profile picture.</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
+      </div>
       <div class="modal-body">
-        <form id="gEditForm">
-          <div class="field"><label>Description</label>
-            <input type="text" name="description" value="${escapeHtml(img.description || '')}">
+        <form id="gEditForm" class="form-grid">
+          <div class="field full"><label>Description</label>
+            <input type="text" name="description" value="${escapeHtml(img.description || '')}" placeholder="Optional caption">
           </div>
-          <label class="checkbox-item" style="margin-top:0.75rem">
+          <label class="check-row field full">
             <input type="checkbox" name="is_profile_picture" ${img.is_profile_picture == 1 ? 'checked' : ''}>
-            Use as profile picture
+            <span class="check-row__text">
+              <strong>Use as profile picture</strong>
+              <span>Shown on the patient page and advisor cards.</span>
+            </span>
           </label>
         </form>
       </div>
@@ -86,19 +94,32 @@
 
   function uploadImage() {
     openModal(`
-      <div class="modal-header"><h2>Upload photo</h2>
-        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button></div>
+      <div class="modal-header">
+        <div>
+          <h2>Upload photo</h2>
+          <p class="modal-sub">Photos are stored on Google Drive and linked here.</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
+      </div>
       <div class="modal-body">
-        <form id="gUpForm">
-          <div class="field"><label>Photo *</label>
-            <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp" required>
+        <form id="gUpForm" class="form-grid">
+          <div class="field full">
+            <div class="file-drop" id="gFileDrop">
+              <div class="file-drop__title">Drop a photo here</div>
+              <div class="file-drop__hint">or click to browse · JPG, PNG, GIF, WebP</div>
+              <div class="file-drop__name"></div>
+              <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp" required>
+            </div>
           </div>
-          <div class="field" style="margin-top:0.75rem"><label>Description</label>
-            <input type="text" name="description">
+          <div class="field full"><label>Description</label>
+            <input type="text" name="description" placeholder="Optional caption">
           </div>
-          <label class="checkbox-item" style="margin-top:0.75rem">
+          <label class="check-row field full">
             <input type="checkbox" name="is_profile_picture">
-            Use as profile picture
+            <span class="check-row__text">
+              <strong>Use as profile picture</strong>
+              <span>Shown on the patient page and advisor cards.</span>
+            </span>
           </label>
         </form>
       </div>
@@ -106,6 +127,7 @@
         <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
         <button type="button" class="btn" id="gDoUpload">Upload</button>
       </div>`);
+    bindFileDrop($('#gFileDrop'));
     $('#gDoUpload').addEventListener('click', async () => {
       const form = $('#gUpForm');
       const file = form.querySelector('[name="image"]').files[0];

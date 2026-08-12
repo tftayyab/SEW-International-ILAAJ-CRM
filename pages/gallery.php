@@ -23,7 +23,7 @@ require ROOT_PATH . '/includes/header.php';
 <div class="page-header">
     <div>
         <p><a href="<?= e($backUrl) ?>">← Back to patient</a></p>
-        <h1>Gallery</h1>
+        <h2 style="margin:0">Patient gallery</h2>
         <p class="muted"><?= e($patient['name']) ?> · <?= e($patient['number']) ?></p>
     </div>
     <?php if (is_editor()): ?>

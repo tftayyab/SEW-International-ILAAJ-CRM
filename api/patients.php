@@ -45,6 +45,21 @@ try {
             json_success(['patient' => $patient]);
             break;
 
+        case 'pending':
+            require_any_role();
+            $result = PatientRepository::pendingResponses([
+                'q' => input('q'),
+                'page' => (int) input('page', 1),
+                'per_page' => (int) input('per_page', 24),
+            ]);
+            foreach ($result['data'] as &$row) {
+                if (!empty($row['profile_image_url'])) {
+                    $row['profile_display_url'] = drive_display_url($row['profile_image_url']);
+                }
+            }
+            json_success($result);
+            break;
+
         case 'by_number':
             $number = trim_str((string) input('number', ''));
             if ($number === '') {

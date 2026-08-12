@@ -44,11 +44,11 @@
     noneSelected = false;
     $('#previewCard').hidden = false;
     $('#previewSummary').innerHTML = `
-      <div class="stat-card"><div class="label">Rows</div><div class="value">${p.total_rows}</div></div>
-      <div class="stat-card"><div class="label">Valid</div><div class="value">${p.valid_rows}</div></div>
-      <div class="stat-card"><div class="label">Invalid</div><div class="value">${p.invalid_rows}</div></div>
-      <div class="stat-card"><div class="label">Messages</div><div class="value">${p.messages_detected}</div></div>
-      <div class="stat-card"><div class="label">Need decision</div><div class="value">${p.needs_resolution_count}</div></div>
+      <div class="stat-card tone-sky"><div class="label">Rows</div><div class="value">${p.total_rows}</div></div>
+      <div class="stat-card tone-mint"><div class="label">Valid</div><div class="value">${p.valid_rows}</div></div>
+      <div class="stat-card tone-pink"><div class="label">Invalid</div><div class="value value-danger">${p.invalid_rows}</div></div>
+      <div class="stat-card tone-lavender"><div class="label">Messages</div><div class="value">${p.messages_detected}</div></div>
+      <div class="stat-card tone-yellow"><div class="label">Need decision</div><div class="value value-warm">${p.needs_resolution_count}</div></div>
     `;
 
     let errHtml = '';

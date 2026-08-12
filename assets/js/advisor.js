@@ -1,11 +1,10 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, truncate, debounce, ImageCache } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, formatDate, debounce, ImageCache } = AppUtil;
 
   let page = 1;
   let currentPatientId = null;
   let lastForcedId = null;
   let lastForcedAt = null;
-  let userNavigatedAway = false;
 
   async function loadList() {
     ImageCache.clear();
@@ -28,24 +27,26 @@
     if (!res.data.length) {
       box.innerHTML = '<div class="empty-state">No patients found.</div>';
     } else {
-      box.innerHTML = res.data.map((p) => `
-        <button type="button" class="patient-card" data-id="${p.id}">
-          ${p.profile_image_id ? `<img class="avatar img-loading" data-image-id="${p.profile_image_id}" alt="">` : ''}
-          <h3>${escapeHtml(p.name)}</h3>
-          <div class="meta">
-            <div>Mother: ${escapeHtml(p.mother_name || '—')}</div>
-            <div>${escapeHtml(p.number)}</div>
-            <div>${escapeHtml(p.city || '—')}${p.country ? ', ' + escapeHtml(p.country) : ''}</div>
-            <div>${escapeHtml(p.occupation || '—')}</div>
-            <div>Last: ${escapeHtml(formatDate(p.last_activity) || '—')}</div>
+      // Same card design as Pending replies — no images on list cards
+      const tones = ['tone-peach', 'tone-mint', 'tone-sky', 'tone-yellow'];
+      box.innerHTML = res.data.map((p, i) => {
+        const dateText = p.last_activity ? escapeHtml(formatDate(p.last_activity)) : 'No activity';
+        return `
+        <button type="button" class="info-card ${tones[i % tones.length]}" data-id="${p.id}">
+          <div class="info-card__top">
+            <span class="info-card__status is-info">Patient</span>
+            <span class="info-card__date">${dateText}</span>
           </div>
-        </button>
-      `).join('');
-      ImageCache.loadAll(box);
+          <div class="info-card__identity">
+            <h3 class="info-card__name">${escapeHtml(p.name)}</h3>
+            ${p.mother_name ? `<p class="info-card__sub"><span>Mother</span> ${escapeHtml(p.mother_name)}</p>` : ''}
+          </div>
+          <span class="info-card__cta">Open conversation →</span>
+        </button>`;
+      }).join('');
       $all('[data-id]', box).forEach((btn) => {
         btn.addEventListener('click', () => {
-          userNavigatedAway = true;
-          openPatient(parseInt(btn.dataset.id, 10), false);
+          openPatient(parseInt(btn.dataset.id, 10)).catch((e) => toast(e.message));
         });
       });
     }
@@ -62,9 +63,8 @@
     }));
   }
 
-  async function openPatient(id, fromForce) {
+  async function openPatient(id) {
     currentPatientId = id;
-    if (fromForce) userNavigatedAway = false;
     ImageCache.clear();
 
     const [pRes, mRes] = await Promise.all([
@@ -82,17 +82,13 @@
       : '';
 
     $('#advHero').innerHTML = `
-      ${avatar}
-      <div style="flex:1;min-width:220px">
-        <div class="info-grid">
-          <div><strong>Mother</strong><span>${escapeHtml(p.mother_name || '—')}</span></div>
-          <div><strong>Number</strong><span>${escapeHtml(p.number)}</span></div>
-          <div><strong>Country</strong><span>${escapeHtml(p.country || '—')}</span></div>
-          <div><strong>City</strong><span>${escapeHtml(p.city || '—')}</span></div>
-          <div><strong>Occupation</strong><span>${escapeHtml(p.occupation || '—')}</span></div>
+      ${avatar || '<div class="avatar-lg avatar-lg--empty" aria-hidden="true"></div>'}
+      <div class="advisor-identity">
+        <h3 class="advisor-identity__name">${escapeHtml(p.name)}</h3>
+        <div class="advisor-identity__mother">
+          <span class="advisor-identity__label">Mother</span>
+          <span class="advisor-identity__value">${escapeHtml(p.mother_name || '—')}</span>
         </div>
-        ${p.notes ? `<div class="notes-box"><strong>Notes</strong><div style="margin-top:0.35rem;white-space:pre-wrap">${escapeHtml(p.notes)}</div></div>` : ''}
-        ${Number(p.image_count) > 0 ? `<p class="profile-only-note" style="margin-top:0.75rem">Profile picture shown above. <a href="${APP.baseUrl}/pages/gallery.php?id=${p.id}">Open gallery</a> for all photos.</p>` : ''}
       </div>`;
     ImageCache.loadAll($('#advHero'));
 
@@ -117,11 +113,13 @@
         </div>`).join('');
     }
 
+    if (window.history.replaceState) {
+      window.history.replaceState({}, '', APP.baseUrl + '/pages/advisor.php?patient=' + id);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function showList() {
-    userNavigatedAway = true;
     currentPatientId = null;
     if (window.history.replaceState) {
       window.history.replaceState({}, '', APP.baseUrl + '/pages/advisor.php');
@@ -131,6 +129,10 @@
     loadList().catch((e) => toast(e.message));
   }
 
+  /**
+   * Only open a patient when the Editor freshly presents one.
+   * On first load we only remember the current forced state — stay on the list.
+   */
   async function pollActive() {
     try {
       const res = await api('active_patient.php?action=get');
@@ -138,23 +140,29 @@
       const forcedId = state.active_patient_id;
       const updatedAt = state.updated_at;
 
-      if (forcedId && (forcedId !== lastForcedId || updatedAt !== lastForcedAt)) {
-        const isNewForce = lastForcedAt !== null && updatedAt !== lastForcedAt;
-        const isInitial = lastForcedAt === null;
-        lastForcedId = forcedId;
-        lastForcedAt = updatedAt;
+      if (!forcedId) {
+        lastForcedId = null;
+        lastForcedAt = updatedAt || null;
+        return;
+      }
 
-        if (isInitial || isNewForce || forcedId !== currentPatientId) {
-          if (forcedId !== currentPatientId) {
-            const banner = $('#forcedBanner');
-            banner.classList.add('show');
-            setTimeout(() => banner.classList.remove('show'), 2500);
-            await openPatient(forcedId, true);
-          }
-        }
-      } else if (forcedId) {
+      const isFirstPoll = lastForcedAt === null && lastForcedId === null;
+      if (isFirstPoll) {
+        // Remember existing selection but do NOT auto-open on page load
         lastForcedId = forcedId;
         lastForcedAt = updatedAt;
+        return;
+      }
+
+      const isNewForce = forcedId !== lastForcedId || updatedAt !== lastForcedAt;
+      lastForcedId = forcedId;
+      lastForcedAt = updatedAt;
+
+      if (isNewForce && forcedId !== currentPatientId) {
+        const banner = $('#forcedBanner');
+        banner.classList.add('show');
+        setTimeout(() => banner.classList.remove('show'), 2500);
+        await openPatient(forcedId);
       }
     } catch (e) {
       // silent poll failures
@@ -172,12 +180,15 @@
       if (el) el.addEventListener('input', live);
     });
     $('#btnBackToList').addEventListener('click', showList);
+
+    // Always start on the list. Only open a patient if URL has ?patient= (e.g. from gallery back).
     const qPatient = parseInt(new URLSearchParams(window.location.search).get('patient') || '0', 10);
     if (qPatient > 0) {
-      openPatient(qPatient, false).catch((e) => toast(e.message));
+      openPatient(qPatient).catch((e) => toast(e.message));
     } else {
       loadList().catch((e) => toast(e.message));
     }
+
     pollActive();
     setInterval(pollActive, 2500);
   });
