@@ -1,5 +1,5 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, truncate, openModal, closeModal, confirmDeletePhrase, debounce, icons, ImageCache, bindAvatarPicker, uploadPatientAvatar } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, formatDate, truncate, openModal, closeModal, confirmDeletePhrase, debounce, icons, ImageCache, bindAvatarPicker, uploadPatientAvatar, withView } = AppUtil;
 
   let state = { page: 1, sort: 'last_activity', dir: 'DESC' };
 
@@ -96,7 +96,7 @@
       </div>`;
 
     $all('.row-link', wrap).forEach((row) => {
-      row.addEventListener('click', () => { window.location.href = row.dataset.href; });
+      row.addEventListener('click', () => { window.location.href = withView(row.dataset.href); });
     });
     $all('[data-sort]', wrap).forEach((th) => {
       th.addEventListener('click', () => {
@@ -220,13 +220,13 @@
               await uploadPatientAvatar(created.id, file);
             } catch (upErr) {
               toast('Patient created, but photo upload failed: ' + upErr.message);
-              window.location.href = APP.baseUrl + '/pages/patient.php?id=' + created.id;
+              window.location.href = withView(APP.baseUrl + '/pages/patient.php?id=' + created.id);
               return;
             }
           }
           toast(file ? 'Patient created with profile photo.' : 'Patient created.');
           closeModal();
-          window.location.href = APP.baseUrl + '/pages/patient.php?id=' + created.id;
+          window.location.href = withView(APP.baseUrl + '/pages/patient.php?id=' + created.id);
         }
       } catch (e) {
         toast(e.message);

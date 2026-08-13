@@ -3,8 +3,7 @@
 
   let page = 1;
   let currentPatientId = null;
-  let lastForcedId = null;
-  let lastForcedAt = null;
+  let lastForcedNonce = null;
 
   async function loadList() {
     ImageCache.clear();
@@ -137,27 +136,17 @@
       const res = await api('active_patient.php?action=get');
       const state = res.state;
       const forcedId = state.active_patient_id;
-      const updatedAt = state.updated_at;
+      const nonce = Number(state.present_nonce || 0);
 
-      if (!forcedId) {
-        lastForcedId = null;
-        lastForcedAt = updatedAt || null;
+      if (lastForcedNonce === null) {
+        lastForcedNonce = nonce;
         return;
       }
 
-      const isFirstPoll = lastForcedAt === null && lastForcedId === null;
-      if (isFirstPoll) {
-        // Remember existing selection but do NOT auto-open on page load
-        lastForcedId = forcedId;
-        lastForcedAt = updatedAt;
-        return;
-      }
+      const isNewForce = nonce !== lastForcedNonce;
+      lastForcedNonce = nonce;
 
-      const isNewForce = forcedId !== lastForcedId || updatedAt !== lastForcedAt;
-      lastForcedId = forcedId;
-      lastForcedAt = updatedAt;
-
-      if (isNewForce && forcedId !== currentPatientId) {
+      if (isNewForce && forcedId && forcedId !== currentPatientId) {
         const banner = $('#forcedBanner');
         banner.classList.add('show');
         setTimeout(() => banner.classList.remove('show'), 2500);
@@ -188,7 +177,15 @@
       loadList().catch((e) => toast(e.message));
     }
 
+    if (new URLSearchParams(window.location.search).get('presented')) {
+      const banner = $('#forcedBanner');
+      if (banner) {
+        banner.classList.add('show');
+        setTimeout(() => banner.classList.remove('show'), 2500);
+      }
+    }
+
     pollActive();
-    setInterval(pollActive, 2500);
+    setInterval(pollActive, 1500);
   });
 })();

@@ -15,8 +15,7 @@ if (input('action') === 'switch') {
 
 $role = input('role');
 if ($role === ROLE_EDITOR || $role === ROLE_AMEER) {
-    set_role($role);
-    redirect(base_url('pages/dashboard.php'));
+    redirect(base_url('pages/dashboard.php?view=' . $role));
 }
 
 ?><!DOCTYPE html>

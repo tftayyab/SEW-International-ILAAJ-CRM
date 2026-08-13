@@ -10,37 +10,37 @@ $editorLinks = [
     [
         'key'   => 'dashboard',
         'label' => 'Dashboard',
-        'href'  => base_url('pages/dashboard.php'),
+        'href'  => with_view(base_url('pages/dashboard.php')),
         'icon'  => 'grid',
     ],
     [
         'key'   => 'patients',
         'label' => 'Patients',
-        'href'  => base_url('pages/patients.php'),
+        'href'  => with_view(base_url('pages/patients.php')),
         'icon'  => 'user',
     ],
     [
         'key'   => 'pending',
         'label' => 'Pending replies',
-        'href'  => base_url('pages/pending.php'),
+        'href'  => with_view(base_url('pages/pending.php')),
         'icon'  => 'inbox',
     ],
     [
         'key'   => 'meetings',
         'label' => 'Meetings',
-        'href'  => base_url('pages/meetings.php'),
+        'href'  => with_view(base_url('pages/meetings.php')),
         'icon'  => 'calendar',
     ],
     [
         'key'   => 'import',
         'label' => 'Import Excel',
-        'href'  => base_url('pages/import.php'),
+        'href'  => with_view(base_url('pages/import.php')),
         'icon'  => 'upload',
     ],
     [
         'key'   => 'drive',
         'label' => 'Drive Setup',
-        'href'  => base_url('pages/drive_setup.php'),
+        'href'  => with_view(base_url('pages/drive_setup.php')),
         'icon'  => 'cloud',
     ],
 ];
@@ -49,19 +49,19 @@ $ameerLinks = [
     [
         'key'   => 'dashboard',
         'label' => 'Dashboard',
-        'href'  => base_url('pages/dashboard.php'),
+        'href'  => with_view(base_url('pages/dashboard.php')),
         'icon'  => 'grid',
     ],
     [
         'key'   => 'advisor',
         'label' => 'Patients',
-        'href'  => base_url('pages/advisor.php'),
+        'href'  => with_view(base_url('pages/advisor.php')),
         'icon'  => 'user',
     ],
     [
         'key'   => 'pending',
         'label' => 'Pending replies',
-        'href'  => base_url('pages/pending.php'),
+        'href'  => with_view(base_url('pages/pending.php')),
         'icon'  => 'inbox',
     ],
 ];
@@ -117,7 +117,7 @@ function nav_icon(string $name): string
 </button>
 
 <aside class="sidebar" id="appNav">
-    <a class="sidebar-brand" href="<?= e(base_url('pages/dashboard.php')) ?>" title="ILAAJ CRM">
+    <a class="sidebar-brand" href="<?= e(with_view(base_url('pages/dashboard.php'))) ?>" title="ILAAJ CRM">
         <img src="<?= e(asset_url('images/logo.png')) ?>" alt="ILAAJ CRM">
     </a>
 

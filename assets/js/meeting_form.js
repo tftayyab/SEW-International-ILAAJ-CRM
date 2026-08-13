@@ -1,5 +1,5 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, openModal, closeModal, debounce } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, openModal, closeModal, debounce, withView } = AppUtil;
 
   const selectedPatients = new Map();
 
@@ -210,12 +210,12 @@
         if (data.id && Number(data.id) > 0) {
           await api('meetings.php?action=update', { method: 'POST', body: data });
           toast('Meeting updated.');
-          window.location.href = APP.baseUrl + '/pages/meeting.php?id=' + data.id;
+          window.location.href = withView(APP.baseUrl + '/pages/meeting.php?id=' + data.id);
         } else {
           delete data.id;
           const created = await api('meetings.php?action=create', { method: 'POST', body: data });
           toast('Meeting created.');
-          window.location.href = APP.baseUrl + '/pages/meeting.php?id=' + created.id;
+          window.location.href = withView(APP.baseUrl + '/pages/meeting.php?id=' + created.id);
         }
       } catch (e) { toast(e.message); }
     });

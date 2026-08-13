@@ -44,6 +44,16 @@ function asset_url(string $path): string
 
 function redirect(string $url): void
 {
+    if (
+        function_exists('current_role')
+        && current_role()
+        && !str_contains($url, 'login.php')
+        && !str_contains($url, 'action=logout')
+        && !str_contains($url, 'action=switch')
+        && !preg_match('/index\.php(?:\?|$)/', $url)
+    ) {
+        $url = with_view($url);
+    }
     header('Location: ' . $url);
     exit;
 }
