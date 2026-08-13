@@ -50,7 +50,6 @@
       <div class="modal-header">
         <div>
           <h2>Edit photo</h2>
-          <p class="modal-sub">Update the caption or set this as the profile picture.</p>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
       </div>
@@ -97,7 +96,6 @@
       <div class="modal-header">
         <div>
           <h2>Upload photo</h2>
-          <p class="modal-sub">Photos are stored on Google Drive and linked here.</p>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
       </div>

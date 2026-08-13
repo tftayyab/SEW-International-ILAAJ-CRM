@@ -1,5 +1,5 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, debounce } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, debounce, copyText } = AppUtil;
   const state = window.MEETING_VIEW || { id: 0, patients: [] };
   const filter = { q: '', status: 'all' };
 
@@ -173,6 +173,17 @@
 
     $('#patientsMarkPresent').addEventListener('click', () => markAll(true));
     $('#patientsMarkAbsent').addEventListener('click', () => markAll(false));
+
+    $all('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await copyText(btn.dataset.copy);
+          toast('Link copied.');
+        } catch (err) {
+          toast(err.message || 'Could not copy.');
+        }
+      });
+    });
 
     render();
   });

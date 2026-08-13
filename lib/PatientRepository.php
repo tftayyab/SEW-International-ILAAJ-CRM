@@ -149,6 +149,21 @@ class PatientRepository
         return ['data' => $rows, 'pagination' => $pager];
     }
 
+    /**
+     * Unfiltered count of patients awaiting an Ameer Sahab reply.
+     */
+    public static function pendingCount(): int
+    {
+        $lastMsgId = "(SELECT m.id FROM messages m WHERE m.patient_id = p.id
+            ORDER BY m.message_date IS NULL, m.message_date DESC, m.import_order DESC, m.id DESC
+            LIMIT 1)";
+        $sql = "SELECT COUNT(*)
+            FROM patients p
+            JOIN messages last_msg ON last_msg.id = {$lastMsgId}
+            WHERE p.is_archived = 0 AND last_msg.sender_type = 'patient'";
+        return (int) db()->query($sql)->fetchColumn();
+    }
+
     public static function findByNumber(string $number): array
     {
         $stmt = db()->prepare('SELECT p.*, 

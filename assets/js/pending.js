@@ -20,8 +20,6 @@
     const box = $('#pendingCards');
     const rows = res.data || [];
 
-    $('#pendingCount').textContent = res.pagination.total + ' pending';
-
     if (!rows.length) {
       box.innerHTML = '<div class="empty-state">' +
         (isAmeer ? 'No patients are waiting for your reply.' : 'No patients are awaiting a reply. Nicely done.') +

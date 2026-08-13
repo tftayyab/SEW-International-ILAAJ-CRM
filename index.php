@@ -1,23 +1,22 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
 
-$role = input('role');
-if ($role === ROLE_EDITOR || $role === ROLE_AMEER) {
-    set_role($role);
-    if ($role === ROLE_EDITOR) {
-        redirect(base_url('pages/dashboard.php'));
-    }
-    redirect(base_url('pages/advisor.php'));
+if (input('action') === 'logout') {
+    auth_clear();
+    redirect(base_url('pages/login.php'));
 }
 
-if (input('action') === 'logout') {
+require_login();
+
+if (input('action') === 'switch') {
     clear_role();
     redirect(base_url('index.php'));
 }
 
-// Already has role? Optional redirect
-if (current_role() === ROLE_EDITOR && !isset($_GET['stay'])) {
-    // Stay on landing if they want to switch — show landing always when visiting index
+$role = input('role');
+if ($role === ROLE_EDITOR || $role === ROLE_AMEER) {
+    set_role($role);
+    redirect(base_url('pages/dashboard.php'));
 }
 
 ?><!DOCTYPE html>
@@ -30,14 +29,15 @@ if (current_role() === ROLE_EDITOR && !isset($_GET['stay'])) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= e(asset_url('css/style.css')) ?>">
+    <link rel="icon" href="<?= e(asset_url('images/logo.png')) ?>" type="image/png">
 </head>
 <body class="landing-body">
     <div class="landing">
-        <div class="landing-logo" aria-hidden="true">IL</div>
+        <div class="landing-logo">
+            <img src="<?= e(asset_url('images/logo.png')) ?>" alt="Silsila Warisi">
+        </div>
         <header class="landing-header">
             <p class="landing-eyebrow">SEW International &middot; <?= e(date('j M Y')) ?></p>
-            <h1 class="landing-brand">ILAAJ CRM</h1>
-            <p class="landing-sub">Patient Advisor &amp; Writer Management System</p>
         </header>
 
         <div class="landing-actions">
@@ -52,7 +52,8 @@ if (current_role() === ROLE_EDITOR && !isset($_GET['stay'])) {
         </div>
 
         <footer class="landing-footer">
-            <p>Select a role to continue. No login required.</p>
+            <p>Signed in as <strong><?= e((string) current_username()) ?></strong>
+                &middot; <a href="<?= e(base_url('index.php?action=logout')) ?>">Sign out</a></p>
         </footer>
     </div>
 </body>

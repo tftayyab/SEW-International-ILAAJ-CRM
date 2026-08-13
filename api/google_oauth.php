@@ -49,13 +49,6 @@ $activeNav = 'drive';
 require ROOT_PATH . '/includes/header.php';
 ?>
 
-<div class="page-header">
-    <div>
-        <h1>Google OAuth</h1>
-        <p>One-time connection result</p>
-    </div>
-</div>
-
 <?php if ($error): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
     <p><a class="btn" href="<?= e(base_url('pages/drive_setup.php')) ?>">Back to Drive Setup</a></p>

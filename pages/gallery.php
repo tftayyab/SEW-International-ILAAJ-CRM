@@ -16,6 +16,7 @@ $backUrl = is_ameer()
     : base_url('pages/patient.php?id=' . $id);
 
 $pageTitle = 'Gallery — ' . $patient['name'];
+$showPageHeading = false;
 $activeNav = is_ameer() ? 'advisor' : 'patients';
 $pageScripts = ['gallery.js'];
 require ROOT_PATH . '/includes/header.php';
@@ -23,8 +24,6 @@ require ROOT_PATH . '/includes/header.php';
 <div class="page-header">
     <div>
         <p><a href="<?= e($backUrl) ?>">← Back to patient</a></p>
-        <h2 style="margin:0">Patient gallery</h2>
-        <p class="muted"><?= e($patient['name']) ?> · <?= e($patient['number']) ?></p>
     </div>
     <?php if (is_editor()): ?>
         <button type="button" class="btn" id="btnUploadGallery">+ Upload photo</button>

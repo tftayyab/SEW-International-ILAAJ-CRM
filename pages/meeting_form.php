@@ -15,6 +15,7 @@ if ($editId > 0) {
 }
 
 $pageTitle = $meeting ? 'Edit meeting' : 'Create meeting';
+$showPageHeading = false;
 $activeNav = 'meetings';
 $pageScripts = ['meeting_form.js'];
 require ROOT_PATH . '/includes/header.php';
@@ -22,8 +23,6 @@ require ROOT_PATH . '/includes/header.php';
 <div class="page-header">
     <div>
         <p><a href="<?= e(base_url('pages/meetings.php')) ?>">← Meetings</a></p>
-        <h2 style="margin:0"><?= $meeting ? 'Edit meeting details' : 'New meeting details' ?></h2>
-        <p>Choose who is <strong>expected</strong> to attend. After saving, open the meeting to mark who was actually present.</p>
     </div>
 </div>
 
@@ -48,8 +47,8 @@ require ROOT_PATH . '/includes/header.php';
         <div class="field full"><label>Description</label>
             <textarea name="description"><?= e($meeting['description'] ?? '') ?></textarea>
         </div>
-        <div class="field full"><label>Notes</label>
-            <textarea name="notes"><?= e($meeting['notes'] ?? '') ?></textarea>
+        <div class="field full"><label>Meeting link</label>
+            <input type="text" name="meeting_link" placeholder="https://…" value="<?= e($meeting['meeting_link'] ?? '') ?>">
         </div>
     </div>
 </form>
@@ -78,6 +77,7 @@ require ROOT_PATH . '/includes/header.php';
           'name' => $p['name'],
           'number' => $p['number'] ?? '',
           'city' => $p['city'] ?? '',
+          'country' => $p['country'] ?? '',
       ], $meeting['patients'] ?? []),
   ], JSON_UNESCAPED_UNICODE) ?>;
 </script>

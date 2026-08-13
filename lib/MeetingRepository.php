@@ -9,12 +9,13 @@ class MeetingRepository
 {
     public static function list(array $filters = []): array
     {
+        self::ensureLinkColumn();
         $where = ['1=1'];
         $params = [];
         if (!empty($filters['q'])) {
             $q = '%' . $filters['q'] . '%';
-            $where[] = '(m.name LIKE ? OR m.location LIKE ? OR m.description LIKE ?)';
-            array_push($params, $q, $q, $q);
+            $where[] = '(m.name LIKE ? OR m.location LIKE ? OR m.description LIKE ? OR m.meeting_link LIKE ?)';
+            array_push($params, $q, $q, $q, $q);
         }
         $whereSql = implode(' AND ', $where);
 
@@ -36,6 +37,7 @@ class MeetingRepository
 
     public static function find(int $id): ?array
     {
+        self::ensureLinkColumn();
         $stmt = db()->prepare('SELECT * FROM meetings WHERE id = ?');
         $stmt->execute([$id]);
         $meeting = $stmt->fetch();
@@ -53,11 +55,12 @@ class MeetingRepository
 
     public static function create(array $data): int
     {
+        self::ensureLinkColumn();
         $pdo = db();
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare('INSERT INTO meetings (name, meeting_date, start_time, end_time, location, description, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $stmt = $pdo->prepare('INSERT INTO meetings (name, meeting_date, start_time, end_time, location, description, notes, meeting_link)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
             $stmt->execute([
                 trim_str($data['name']),
                 parse_date($data['meeting_date'] ?? null),
@@ -66,6 +69,7 @@ class MeetingRepository
                 null_if_empty($data['location'] ?? null),
                 null_if_empty($data['description'] ?? null),
                 null_if_empty($data['notes'] ?? null),
+                self::cleanLink($data['meeting_link'] ?? null),
             ]);
             $id = (int) $pdo->lastInsertId();
             self::syncAttendees($pdo, $id, $data['patient_ids'] ?? []);
@@ -79,10 +83,11 @@ class MeetingRepository
 
     public static function update(int $id, array $data): bool
     {
+        self::ensureLinkColumn();
         $pdo = db();
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare('UPDATE meetings SET name = ?, meeting_date = ?, start_time = ?, end_time = ?, location = ?, description = ?, notes = ? WHERE id = ?');
+            $stmt = $pdo->prepare('UPDATE meetings SET name = ?, meeting_date = ?, start_time = ?, end_time = ?, location = ?, description = ?, notes = ?, meeting_link = ? WHERE id = ?');
             $stmt->execute([
                 trim_str($data['name']),
                 parse_date($data['meeting_date'] ?? null),
@@ -91,6 +96,7 @@ class MeetingRepository
                 null_if_empty($data['location'] ?? null),
                 null_if_empty($data['description'] ?? null),
                 null_if_empty($data['notes'] ?? null),
+                self::cleanLink($data['meeting_link'] ?? null),
                 $id,
             ]);
             self::syncAttendees($pdo, $id, $data['patient_ids'] ?? []);
@@ -169,5 +175,28 @@ class MeetingRepository
             $errors[] = 'Meeting name is required.';
         }
         return $errors;
+    }
+
+    private static function cleanLink(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        return $value === '' ? null : $value;
+    }
+
+    private static function ensureLinkColumn(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        try {
+            $col = db()->query("SHOW COLUMNS FROM meetings LIKE 'meeting_link'")->fetch();
+            if (!$col) {
+                db()->exec('ALTER TABLE meetings ADD COLUMN meeting_link VARCHAR(1000) NULL');
+            }
+        } catch (Throwable $e) {
+            log_error('ensure meeting_link column', $e);
+        }
     }
 }

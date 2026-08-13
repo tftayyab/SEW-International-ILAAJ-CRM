@@ -7,13 +7,6 @@ $activeNav = 'import';
 $pageScripts = ['import.js'];
 require ROOT_PATH . '/includes/header.php';
 ?>
-<div class="page-header">
-    <div>
-        <h2 style="margin:0">Sheet importer</h2>
-        <p>Upload organizational Excel/CSV files. Conversations are normalized into individual messages.</p>
-    </div>
-</div>
-
 <div class="card" id="uploadCard">
     <h2 style="margin-top:0">Upload file</h2>
     <p class="muted">Accepted formats: .xlsx, .xls, .csv.<br>

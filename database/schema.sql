@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS patient_images;
 DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS system_state;
 DROP TABLE IF EXISTS patients;
+DROP TABLE IF EXISTS users;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -102,6 +103,7 @@ CREATE TABLE meetings (
   location VARCHAR(255) NULL,
   description TEXT NULL,
   notes TEXT NULL,
+  meeting_link VARCHAR(1000) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_meetings_date (meeting_date),
@@ -150,6 +152,17 @@ CREATE TABLE system_state (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO system_state (id, active_patient_id) VALUES (1, NULL);
+
+-- Login accounts (no public registration — insert users yourself with a normal password)
+CREATE TABLE users (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(120) NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_users_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Excel import history
 CREATE TABLE excel_imports (

@@ -34,6 +34,7 @@ try {
                 'location' => input('location'),
                 'description' => input('description'),
                 'notes' => input('notes'),
+                'meeting_link' => input('meeting_link'),
                 'patient_ids' => input('patient_ids', []) ?: [],
             ];
             if (!is_array($data['patient_ids'])) {
@@ -61,6 +62,7 @@ try {
                 'location' => input('location'),
                 'description' => input('description'),
                 'notes' => input('notes'),
+                'meeting_link' => input('meeting_link'),
                 'patient_ids' => input('patient_ids', []) ?: [],
             ];
             if (!is_array($data['patient_ids'])) {

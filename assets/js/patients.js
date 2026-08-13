@@ -141,7 +141,6 @@
       <div class="modal-header">
         <div>
           <h2>${isEdit ? 'Edit patient' : 'Add patient'}</h2>
-          <p class="modal-sub">${isEdit ? 'Update details and optionally change the profile photo.' : 'Fill in the basics. You can add a profile photo now.'}</p>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
       </div>
@@ -166,12 +165,12 @@
           </div>
 
           <div class="field full"><div class="modal-section-label">Details</div></div>
-          <div class="field"><label>Patient name *</label><input name="name" required autocomplete="name" value="${escapeHtml(p.name || '')}" placeholder="Full name"></div>
-          <div class="field"><label>Mother's name</label><input name="mother_name" value="${escapeHtml(p.mother_name || '')}" placeholder="Optional"></div>
-          <div class="field"><label>Number *</label><input name="number" required inputmode="tel" value="${escapeHtml(p.number || '')}" placeholder="Phone number"></div>
-          <div class="field"><label>Occupation</label><input name="occupation" value="${escapeHtml(p.occupation || '')}" placeholder="Optional"></div>
-          <div class="field"><label>City</label><input name="city" value="${escapeHtml(p.city || '')}" placeholder="Optional"></div>
-          <div class="field"><label>Country</label><input name="country" value="${escapeHtml(p.country || '')}" placeholder="Optional"></div>
+          <div class="field"><label>Patient name *</label><input type="text" name="name" required autocomplete="name" value="${escapeHtml(p.name || '')}" placeholder="Full name"></div>
+          <div class="field"><label>Mother's name</label><input type="text" name="mother_name" value="${escapeHtml(p.mother_name || '')}" placeholder="Optional"></div>
+          <div class="field"><label>Number *</label><input type="tel" name="number" required inputmode="tel" value="${escapeHtml(p.number || '')}" placeholder="Phone number"></div>
+          <div class="field"><label>Occupation</label><input type="text" name="occupation" value="${escapeHtml(p.occupation || '')}" placeholder="Optional"></div>
+          <div class="field"><label>City</label><input type="text" name="city" value="${escapeHtml(p.city || '')}" placeholder="Optional"></div>
+          <div class="field"><label>Country</label><input type="text" name="country" value="${escapeHtml(p.country || '')}" placeholder="Optional"></div>
           <div class="field full"><label>Notes</label><textarea name="notes" placeholder="Private notes for the editor…">${escapeHtml(p.notes || '')}</textarea></div>
         </form>
       </div>

@@ -6,6 +6,7 @@
  * @var string $activeNav
  */
 $pageTitle = $pageTitle ?? 'ILAAJ CRM';
+$showPageHeading = $showPageHeading ?? true;
 $bodyClass = $bodyClass ?? '';
 $activeNav = $activeNav ?? '';
 $role = current_role();
@@ -23,6 +24,7 @@ $today = date('j M Y');
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= e(asset_url('css/style.css')) ?>">
+    <link rel="icon" href="<?= e(asset_url('images/logo.png')) ?>" type="image/png">
     <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
     <script>
         window.APP = {
@@ -42,7 +44,9 @@ $today = date('j M Y');
     <header class="app-topbar">
         <div class="title-block">
             <p class="eyebrow"><?= e($brandLabel) ?><?= $roleLabel ? ' &middot; ' . e($roleLabel) : '' ?></p>
+            <?php if ($showPageHeading): ?>
             <h1><?= e($pageTitle) ?></h1>
+            <?php endif; ?>
         </div>
         <div class="date-block">
             <p class="today-label">Today</p>

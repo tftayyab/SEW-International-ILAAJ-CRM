@@ -7,17 +7,10 @@ $activeNav = 'meetings';
 $pageScripts = ['meetings.js'];
 require ROOT_PATH . '/includes/header.php';
 ?>
-<div class="page-header">
-    <div>
-        <h2 style="margin:0">Meeting register</h2>
-        <p>Create meetings with expected attendees, then mark who was present.</p>
-    </div>
-    <button type="button" class="btn" id="btnAddMeeting">+ Create Meeting</button>
-</div>
-
 <div class="toolbar">
-    <input type="search" id="meetingSearch" placeholder="Search meetings…" style="max-width:280px">
+    <input type="search" id="meetingSearch" placeholder="Name, location, description, or meeting link…" autocomplete="off">
     <button type="button" class="btn btn-secondary" id="btnMeetingSearch">Search</button>
+    <button type="button" class="btn" id="btnAddMeeting">+ Create Meeting</button>
 </div>
 
 <div id="meetingsTable"></div>

@@ -16,11 +16,7 @@
       dir: 'DESC'
     });
     const q = $('#advisorSearch').value.trim();
-    const country = $('#advisorCountry').value.trim();
-    const city = $('#advisorCity').value.trim();
     if (q) params.set('q', q);
-    if (country) params.set('country', country);
-    if (city) params.set('city', city);
 
     const res = await api('patients.php?' + params.toString());
     const box = $('#advisorCards');
@@ -75,7 +71,8 @@
 
     $('#advisorListView').hidden = true;
     $('#advisorDetailView').hidden = false;
-    $('#advName').textContent = p.name;
+    const heading = document.querySelector('.app-topbar h1');
+    if (heading) heading.hidden = true;
 
     const avatar = p.profile_image_id
       ? `<img class="avatar-lg img-loading" data-image-id="${p.profile_image_id}" alt="">`
@@ -126,6 +123,8 @@
     }
     $('#advisorDetailView').hidden = true;
     $('#advisorListView').hidden = false;
+    const heading = document.querySelector('.app-topbar h1');
+    if (heading) heading.hidden = false;
     loadList().catch((e) => toast(e.message));
   }
 

@@ -47,6 +47,12 @@ $editorLinks = [
 
 $ameerLinks = [
     [
+        'key'   => 'dashboard',
+        'label' => 'Dashboard',
+        'href'  => base_url('pages/dashboard.php'),
+        'icon'  => 'grid',
+    ],
+    [
         'key'   => 'advisor',
         'label' => 'Patients',
         'href'  => base_url('pages/advisor.php'),
@@ -61,6 +67,16 @@ $ameerLinks = [
 ];
 
 $links = is_editor() ? $editorLinks : (is_ameer() ? $ameerLinks : []);
+
+$pendingLeft = 0;
+if ($links) {
+    try {
+        require_once ROOT_PATH . '/lib/PatientRepository.php';
+        $pendingLeft = PatientRepository::pendingCount();
+    } catch (Throwable $e) {
+        $pendingLeft = 0;
+    }
+}
 
 /**
  * Render one of the built-in inline icons.
@@ -101,17 +117,26 @@ function nav_icon(string $name): string
 </button>
 
 <aside class="sidebar" id="appNav">
-    <a class="sidebar-brand" href="<?= e(base_url(is_ameer() ? 'pages/advisor.php' : 'pages/dashboard.php')) ?>" title="ILAAJ CRM">
-        <span>IL</span>
+    <a class="sidebar-brand" href="<?= e(base_url('pages/dashboard.php')) ?>" title="ILAAJ CRM">
+        <img src="<?= e(asset_url('images/logo.png')) ?>" alt="ILAAJ CRM">
     </a>
 
     <nav class="sidebar-nav" aria-label="Primary">
         <?php foreach ($links as $link): ?>
+            <?php
+            $isPending = $link['key'] === 'pending';
+            $badgeLabel = ($isPending && $pendingLeft > 0) ? ($pendingLeft > 9 ? '9+' : (string) $pendingLeft) : '';
+            $aria = $link['label'] . ($isPending && $pendingLeft > 0 ? ', ' . $pendingLeft . ' pending' : '');
+            ?>
             <a href="<?= e($link['href']) ?>"
                class="sidebar-item <?= $activeNav === $link['key'] ? 'active' : '' ?>"
                data-tooltip="<?= e($link['label']) ?>"
-               aria-label="<?= e($link['label']) ?>">
+               data-nav="<?= e($link['key']) ?>"
+               aria-label="<?= e($aria) ?>">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><?= nav_icon($link['icon']) ?></svg>
+                <?php if ($badgeLabel !== ''): ?>
+                    <span class="nav-badge"><?= e($badgeLabel) ?></span>
+                <?php endif; ?>
             </a>
         <?php endforeach; ?>
     </nav>
@@ -119,7 +144,7 @@ function nav_icon(string $name): string
     <div class="sidebar-spacer"></div>
 
     <?php if ($role): ?>
-        <a href="<?= e(base_url('index.php?action=logout')) ?>"
+        <a href="<?= e(base_url('index.php?action=switch')) ?>"
            class="sidebar-item logout"
            data-tooltip="Switch role"
            aria-label="Switch role">

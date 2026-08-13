@@ -10,7 +10,7 @@ class MessageRepository
     public static function forPatient(int $patientId): array
     {
         $stmt = db()->prepare('SELECT * FROM messages WHERE patient_id = ?
-            ORDER BY import_order ASC, id ASC');
+            ORDER BY message_date IS NULL, message_date DESC, import_order DESC, id DESC');
         $stmt->execute([$patientId]);
         return $stmt->fetchAll();
     }

@@ -1,6 +1,31 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, debounce, icons } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, formatDate, debounce, icons, truncate, copyText } = AppUtil;
   let page = 1;
+
+  function linkCell(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return '—';
+    const href = /^https?:\/\//i.test(raw) ? raw : 'https://' + raw;
+    return `<div class="copy-cell">
+      <a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(raw)}">${escapeHtml(truncate(raw, 34))}</a>
+      <button type="button" class="icon-btn" data-copy="${escapeHtml(raw)}" title="Copy link">${icons.copy}</button>
+    </div>`;
+  }
+
+  function bindCopy(root) {
+    $all('[data-copy]', root).forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          await copyText(btn.dataset.copy);
+          toast('Link copied.');
+        } catch (err) {
+          toast(err.message || 'Could not copy.');
+        }
+      });
+    });
+  }
 
   async function loadMeetings() {
     const q = $('#meetingSearch').value.trim();
@@ -16,13 +41,14 @@
     box.innerHTML = `
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>Name</th><th>Date</th><th>Location</th><th>Patients</th><th class="no-sort"></th></tr></thead>
+          <thead><tr><th>Name</th><th>Date</th><th>Location</th><th>Link</th><th>Patients</th><th class="no-sort"></th></tr></thead>
           <tbody>
             ${res.data.map((m) => `
               <tr class="row-link" data-href="${APP.baseUrl}/pages/meeting.php?id=${m.id}">
                 <td><div class="cell-primary">${escapeHtml(m.name)}</div></td>
                 <td>${escapeHtml(formatDate(m.meeting_date) || '—')}</td>
                 <td>${escapeHtml(m.location || '—')}</td>
+                <td>${linkCell(m.meeting_link)}</td>
                 <td>${m.patients_attended || 0}/${m.patients_count || 0}</td>
                 <td>
                   <div class="icon-actions" onclick="event.stopPropagation()">
@@ -35,8 +61,12 @@
         </table>
       </div>`;
     $all('.row-link', box).forEach((row) => {
-      row.addEventListener('click', () => { window.location.href = row.dataset.href; });
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.copy-cell, .icon-actions, a, button')) return;
+        window.location.href = row.dataset.href;
+      });
     });
+    bindCopy(box);
     $all('[data-del]', box).forEach((btn) => {
       btn.addEventListener('click', async () => {
         if (!confirm('Delete this meeting?')) return;

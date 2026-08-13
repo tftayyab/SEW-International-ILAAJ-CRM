@@ -18,7 +18,8 @@ try {
     log_error('set active patient', $e);
 }
 
-$pageTitle = $patient['name'];
+$pageTitle = 'Patient';
+$showPageHeading = false;
 $activeNav = 'patients';
 $pageScripts = ['patient.js'];
 require ROOT_PATH . '/includes/header.php';
@@ -26,7 +27,6 @@ require ROOT_PATH . '/includes/header.php';
 <div class="page-header">
     <div>
         <p><a href="<?= e(base_url('pages/patients.php')) ?>">← Patients</a></p>
-        <h2 id="patientName" style="margin:0"><?= e($patient['name']) ?></h2>
     </div>
     <div class="actions">
         <button type="button" class="btn btn-ameer" id="btnSendToAmeer">Present to Ameer Sahab</button>
@@ -36,16 +36,13 @@ require ROOT_PATH . '/includes/header.php';
     </div>
 </div>
 
-<div id="ameerSyncBanner" class="forced-banner show">
-    Presented to Ameer Sahab. If he moves away, click <strong>Present to Ameer Sahab</strong> again.
-</div>
-
 <div class="patient-hero" id="patientHero" data-patient-id="<?= (int) $patient['id'] ?>">
     <?php if (!empty($patient['profile_image_id'])): ?>
         <img class="avatar-lg img-loading" data-image-id="<?= (int) $patient['profile_image_id'] ?>" alt="">
     <?php endif; ?>
     <div style="flex:1;min-width:220px">
         <div class="info-grid" id="patientInfo">
+            <div><strong>Patient</strong><span id="patientName"><?= e($patient['name']) ?></span></div>
             <div><strong>Mother</strong><span><?= e($patient['mother_name'] ?: '—') ?></span></div>
             <div><strong>Number</strong><span><?= e($patient['number']) ?></span></div>
             <div><strong>Country</strong><span><?= e($patient['country'] ?: '—') ?></span></div>
@@ -56,9 +53,6 @@ require ROOT_PATH . '/includes/header.php';
             <strong>Notes</strong>
             <div style="margin-top:0.35rem;white-space:pre-wrap"><?= e($patient['notes'] ?? '') ?></div>
         </div>
-        <p class="profile-only-note" style="margin-top:0.85rem">
-            Only the profile picture shows here. Open the <a href="<?= e(base_url('pages/gallery.php?id=' . (int) $patient['id'])) ?>">gallery</a> for all photos.
-        </p>
     </div>
 </div>
 

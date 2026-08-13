@@ -15,7 +15,7 @@
     pBox.innerHTML = patients.map((p) => `
       <span class="chip">
         <span class="chip-label">${escapeHtml(p.name)}</span>
-        <span class="chip-meta">${escapeHtml(p.number || '')}${p.city ? ' · ' + escapeHtml(p.city) : ''}</span>
+        <span class="chip-meta">${escapeHtml(p.number || '')}${p.city ? ' · ' + escapeHtml(p.city) : ''}${p.country ? ' · ' + escapeHtml(p.country) : ''}</span>
         <button type="button" data-rm-p="${p.id}" aria-label="Remove">×</button>
       </span>`).join('');
 
@@ -32,18 +32,17 @@
       <div class="modal-header">
         <div>
           <h2>Add patient</h2>
-          <p class="modal-sub">Quick add — then select them for this meeting.</p>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
       </div>
       <div class="modal-body">
         <form id="newPatientForm" class="form-grid">
-          <div class="field"><label>Patient name *</label><input name="name" required autofocus placeholder="Full name"></div>
-          <div class="field"><label>Mother's name</label><input name="mother_name" placeholder="Optional"></div>
-          <div class="field"><label>Number *</label><input name="number" required inputmode="tel" placeholder="Phone number"></div>
-          <div class="field"><label>Occupation</label><input name="occupation" placeholder="Optional"></div>
-          <div class="field"><label>City</label><input name="city" placeholder="Optional"></div>
-          <div class="field"><label>Country</label><input name="country" placeholder="Optional"></div>
+          <div class="field"><label>Patient name *</label><input type="text" name="name" required autofocus placeholder="Full name"></div>
+          <div class="field"><label>Mother's name</label><input type="text" name="mother_name" placeholder="Optional"></div>
+          <div class="field"><label>Number *</label><input type="tel" name="number" required inputmode="tel" placeholder="Phone number"></div>
+          <div class="field"><label>Occupation</label><input type="text" name="occupation" placeholder="Optional"></div>
+          <div class="field"><label>City</label><input type="text" name="city" placeholder="Optional"></div>
+          <div class="field"><label>Country</label><input type="text" name="country" placeholder="Optional"></div>
         </form>
       </div>
       <div class="modal-footer">
@@ -61,7 +60,8 @@
           id: res.id,
           name: p.name,
           number: p.number || '',
-          city: p.city || ''
+          city: p.city || '',
+          country: p.country || ''
         });
         closeModal();
         renderChips();
@@ -84,15 +84,12 @@
       <div class="modal-header">
         <div>
           <h2>Select expected patients</h2>
-          <p class="modal-sub">Search and tick who should attend this meeting.</p>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
       </div>
       <div class="modal-body">
         <div class="picker-filters" id="patPickFilters">
-          <div class="field field-grow"><label>Search</label><input name="q" type="search" placeholder="Name, number, city…" autocomplete="off"></div>
-          <div class="field"><label>Number</label><input name="number" autocomplete="off"></div>
-          <div class="field"><label>City</label><input name="city" autocomplete="off"></div>
+          <div class="field field-grow"><label>Search</label><input name="q" type="search" placeholder="Name, mother, number, city, or country…" autocomplete="off"></div>
         </div>
         <div class="picker-toolbar">
           <label class="checkbox-item picker-select-all"><input type="checkbox" id="patSelectAll"> Select all shown</label>
@@ -114,10 +111,11 @@
             data-name="${escapeHtml(p.name)}"
             data-number="${escapeHtml(p.number || '')}"
             data-city="${escapeHtml(p.city || '')}"
+            data-country="${escapeHtml(p.country || '')}"
             ${retained.has(Number(p.id)) ? 'checked' : ''}>
           <span class="picker-main">
             <strong>${escapeHtml(p.name)}</strong>
-            <span class="picker-sub">${escapeHtml(p.number || '—')} · ${escapeHtml(p.city || '—')}</span>
+            <span class="picker-sub">${escapeHtml(p.number || '—')} · ${escapeHtml(p.city || '—')} · ${escapeHtml(p.country || '—')}</span>
           </span>
         </label>`).join('') || '<div class="muted">No patients match.</div>';
 
@@ -129,7 +127,8 @@
               id,
               name: cb.dataset.name,
               number: cb.dataset.number || '',
-              city: cb.dataset.city || ''
+              city: cb.dataset.city || '',
+              country: cb.dataset.country || ''
             });
           } else {
             retained.delete(id);
@@ -155,7 +154,8 @@
             id,
             name: cb.dataset.name,
             number: cb.dataset.number || '',
-            city: cb.dataset.city || ''
+            city: cb.dataset.city || '',
+            country: cb.dataset.country || ''
           });
         }
       });
@@ -180,7 +180,8 @@
             id,
             name: cb.dataset.name,
             number: cb.dataset.number || '',
-            city: cb.dataset.city || ''
+            city: cb.dataset.city || '',
+            country: cb.dataset.country || ''
           });
         } else {
           retained.delete(id);

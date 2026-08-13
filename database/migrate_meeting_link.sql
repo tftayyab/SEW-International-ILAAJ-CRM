@@ -1,0 +1,2 @@
+ALTER TABLE meetings
+  ADD COLUMN meeting_link VARCHAR(1000) NULL;

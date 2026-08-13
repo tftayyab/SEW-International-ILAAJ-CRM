@@ -49,6 +49,9 @@
       throw new Error('Invalid server response.');
     }
     if (!res.ok || data.success === false) {
+      if (res.status === 401 && data.error === 'Please sign in.') {
+        window.location.href = (APP.baseUrl || '') + '/pages/login.php';
+      }
       const err = new Error(data.error || 'Request failed.');
       err.data = data;
       err.status = res.status;
@@ -269,7 +272,7 @@
         <label class="duplicate-option">
           <input type="checkbox" name="dup_patient" value="${p.id}">
           <strong>${escapeHtml(p.name)}</strong><br>
-          <span class="muted">Mother: ${escapeHtml(p.mother_name || '—')} · City: ${escapeHtml(p.city || '—')} · Occupation: ${escapeHtml(p.occupation || '—')} · ${escapeHtml(p.number || '')}</span>
+          <span class="muted">Mother: ${escapeHtml(p.mother_name || '—')} · City: ${escapeHtml(p.city || '—')} · Country: ${escapeHtml(p.country || '—')} · Occupation: ${escapeHtml(p.occupation || '—')} · ${escapeHtml(p.number || '')}</span>
         </label>
       `).join('');
 
@@ -359,6 +362,7 @@
     present: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 0 1 5 5v1.1A7 7 0 0 1 19 15v2l2 2v1H3v-1l2-2v-2a7 7 0 0 1 2-4.9V7a5 5 0 0 1 5-5zm0 18a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3z"/></svg>',
     edit: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',
     trash: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
+    copy: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>',
     eye: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 .001 6.001A3 3 0 0 0 12 9z"/></svg>'
   };
 
@@ -408,9 +412,27 @@
   window.addEventListener('pagehide', () => ImageCache.clear());
   window.addEventListener('beforeunload', () => ImageCache.clear());
 
+  async function copyText(text) {
+    const value = String(text || '').trim();
+    if (!value) throw new Error('Nothing to copy.');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+    const ta = document.createElement('textarea');
+    ta.value = value;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+
   window.AppUtil = {
     $, $all, toast, api, escapeHtml, formatDate, truncate, openModal, closeModal,
     confirmDeletePhrase, duplicateNumberPicker, debounce, icons, ImageCache,
-    bindAvatarPicker, bindFileDrop, uploadPatientAvatar
+    bindAvatarPicker, bindFileDrop, uploadPatientAvatar, copyText
   };
 })();

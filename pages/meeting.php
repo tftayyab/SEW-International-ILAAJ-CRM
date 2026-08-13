@@ -10,7 +10,8 @@ if (!$meeting) {
     redirect(base_url('pages/meetings.php'));
 }
 
-$pageTitle = $meeting['name'];
+$pageTitle = 'Meeting';
+$showPageHeading = false;
 $activeNav = 'meetings';
 $pageScripts = ['meeting.js'];
 require ROOT_PATH . '/includes/header.php';
@@ -21,8 +22,6 @@ $patientsTotal = count($meeting['patients'] ?? []);
 <div class="page-header">
     <div>
         <p><a href="<?= e(base_url('pages/meetings.php')) ?>">← Meetings</a></p>
-        <h2 style="margin:0"><?= e($meeting['name']) ?></h2>
-        <p class="muted">Mark who was present. Expected attendees are set when creating/editing the meeting.</p>
     </div>
     <div class="actions">
         <a class="btn btn-secondary" href="<?= e(base_url('pages/meeting_form.php?id=' . (int)$meeting['id'])) ?>">Edit</a>
@@ -32,6 +31,7 @@ $patientsTotal = count($meeting['patients'] ?? []);
 <div class="card">
     <h2 style="margin-top:0">Meeting Information</h2>
     <div class="info-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem">
+        <div><strong>Meeting</strong><div><?= e($meeting['name']) ?></div></div>
         <div><strong>Date</strong><div><?= e(format_date($meeting['meeting_date']) ?: '—') ?></div></div>
         <div><strong>Start</strong><div><?= e($meeting['start_time'] ?: '—') ?></div></div>
         <div><strong>End</strong><div><?= e($meeting['end_time'] ?: '—') ?></div></div>
@@ -41,15 +41,23 @@ $patientsTotal = count($meeting['patients'] ?? []);
     <?php if ($meeting['description']): ?>
         <p style="margin-top:1rem"><strong>Description</strong><br><?= nl2br(e($meeting['description'])) ?></p>
     <?php endif; ?>
-    <?php if ($meeting['notes']): ?>
-        <p style="margin-top:1rem"><strong>Notes</strong><br><?= nl2br(e($meeting['notes'])) ?></p>
+    <?php if (!empty($meeting['meeting_link'])): ?>
+        <?php
+            $rawLink = (string) $meeting['meeting_link'];
+            $href = preg_match('#^https?://#i', $rawLink) ? $rawLink : 'https://' . $rawLink;
+        ?>
+        <div class="copy-link-row">
+            <strong>Meeting link</strong>
+            <a href="<?= e($href) ?>" target="_blank" rel="noopener noreferrer"><?= e($rawLink) ?></a>
+            <button type="button" class="icon-btn" data-copy="<?= e($rawLink) ?>" title="Copy link">Copy</button>
+        </div>
     <?php endif; ?>
 </div>
 
 <div class="card" style="margin-top:1rem" id="attendanceRoot" data-meeting-id="<?= (int)$meeting['id'] ?>">
     <h2 style="margin-top:0">Patients</h2>
     <div class="attendance-controls" data-scope="patients">
-        <input type="search" class="att-search" id="patientsSearch" placeholder="Search patients…" autocomplete="off">
+        <input type="search" class="att-search" id="patientsSearch" placeholder="Name, number, or city…" autocomplete="off">
         <div class="att-status-filters" role="group" aria-label="Patient status filter">
             <button type="button" class="att-filter active" data-status="all">All</button>
             <button type="button" class="att-filter" data-status="present">Present</button>
