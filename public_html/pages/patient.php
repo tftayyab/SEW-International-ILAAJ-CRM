@@ -1,7 +1,6 @@
 <?php
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once ROOT_PATH . '/lib/PatientRepository.php';
-require_once ROOT_PATH . '/lib/SystemState.php';
 
 require_editor();
 
@@ -10,12 +9,6 @@ $patient = PatientRepository::find($id);
 if (!$patient) {
     flash_set('error', 'Patient not found.');
     redirect(base_url('pages/patients.php'));
-}
-
-try {
-    SystemState::setActivePatient($id);
-} catch (Throwable $e) {
-    log_error('set active patient', $e);
 }
 
 $pageTitle = 'Patient';

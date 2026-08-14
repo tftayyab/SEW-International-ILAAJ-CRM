@@ -1,5 +1,5 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, openModal, closeModal, confirmDeletePhrase, ImageCache, bindAvatarPicker, uploadPatientAvatar } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, formatDate, openModal, closeModal, confirmDeletePhrase, ImageCache, bindAvatarPicker, uploadPatientAvatar, withView } = AppUtil;
   const patientId = parseInt($('#patientHero').dataset.patientId, 10);
 
   async function loadMessages() {
@@ -206,7 +206,7 @@
       try {
         await api('patients.php?action=delete', { method: 'POST', body: { id: patientId, confirm_phrase: 'DELETE THIS PATIENT' } });
         toast('Patient deleted.');
-        window.location.href = APP.baseUrl + '/pages/patients.php';
+        window.location.href = withView(APP.baseUrl + '/pages/patients.php');
       } catch (e) { toast(e.message); }
     });
     ImageCache.loadAll($('#patientHero'));

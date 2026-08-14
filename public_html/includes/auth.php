@@ -49,13 +49,11 @@ function auth_read_token(): string
 
 function auth_issue_token(array $user, ?string $role = null): string
 {
-    $role = ($role === ROLE_EDITOR || $role === ROLE_AMEER) ? $role : null;
     $ttl = jwt_ttl_seconds();
     $now = time();
     $token = Jwt::encode([
         'sub' => (int) $user['id'],
         'usr' => (string) $user['username'],
-        'role' => $role,
         'iat' => $now,
         'exp' => $now + $ttl,
     ], jwt_secret());
@@ -121,15 +119,9 @@ function current_user(bool $refresh = false): ?array
         return null;
     }
 
-    $role = $payload['role'] ?? ($_SESSION['role'] ?? null);
-    if ($role !== ROLE_EDITOR && $role !== ROLE_AMEER) {
-        $role = null;
-    }
-
     $cached = [
         'id' => (int) $row['id'],
         'username' => (string) $row['username'],
-        'role' => $role,
     ];
     return $cached;
 }
@@ -140,14 +132,47 @@ function current_username(): ?string
     return $user['username'] ?? null;
 }
 
-function current_role(): ?string
+function normalize_role(?string $role): ?string
 {
-    $user = current_user();
-    $role = $user['role'] ?? null;
+    $role = strtolower(trim((string) $role));
     if ($role === ROLE_EDITOR || $role === ROLE_AMEER) {
         return $role;
     }
     return null;
+}
+
+/**
+ * Role is per tab (query ?view= / X-App-Role), not the shared login cookie,
+ * so Editor and Ameer Sahab can stay open side by side.
+ */
+function requested_role(): ?string
+{
+    $header = normalize_role($_SERVER['HTTP_X_APP_ROLE'] ?? null);
+    if ($header) {
+        return $header;
+    }
+    if (is_api_request()) {
+        return null;
+    }
+    return normalize_role((string) ($_GET['view'] ?? $_POST['view'] ?? ''));
+}
+
+function current_role(): ?string
+{
+    if (!is_logged_in()) {
+        return null;
+    }
+    return requested_role();
+}
+
+function with_view(string $url): string
+{
+    $role = current_role();
+    if (!$role || preg_match('/(?:^|[?&])view=/', $url)) {
+        return $url;
+    }
+    $sep = str_contains($url, '?') ? '&' : '?';
+    return $url . $sep . 'view=' . rawurlencode($role);
 }
 
 function is_editor(): bool
@@ -210,21 +235,12 @@ function require_any_role(): void
 
 function set_role(string $role): void
 {
-    $user = current_user();
-    if (!$user || ($role !== ROLE_EDITOR && $role !== ROLE_AMEER)) {
-        return;
-    }
-    $_SESSION['role'] = $role;
-    auth_issue_token($user, $role);
+    // Role is chosen per tab via ?view= — do not write it into the shared JWT cookie.
 }
 
 function clear_role(): void
 {
-    $user = current_user();
     unset($_SESSION['role']);
-    if ($user) {
-        auth_issue_token($user, null);
-    }
 }
 
 function attempt_login(string $username, string $password): ?array

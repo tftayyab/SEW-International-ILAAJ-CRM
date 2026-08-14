@@ -1,5 +1,5 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, debounce, icons, truncate, copyText } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, formatDate, debounce, icons, truncate, copyText, withView } = AppUtil;
   let page = 1;
 
   function linkCell(url) {
@@ -63,7 +63,7 @@
     $all('.row-link', box).forEach((row) => {
       row.addEventListener('click', (e) => {
         if (e.target.closest('.copy-cell, .icon-actions, a, button')) return;
-        window.location.href = row.dataset.href;
+        window.location.href = withView(row.dataset.href);
       });
     });
     bindCopy(box);
@@ -91,7 +91,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     $('#btnAddMeeting').addEventListener('click', () => {
-      window.location.href = APP.baseUrl + '/pages/meeting_form.php';
+      window.location.href = withView(APP.baseUrl + '/pages/meeting_form.php');
     });
     $('#meetingSearch').addEventListener('input', live);
     $('#btnMeetingSearch').addEventListener('click', () => { page = 1; loadMeetings().catch((e) => toast(e.message)); });

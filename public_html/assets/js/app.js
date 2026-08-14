@@ -23,11 +23,41 @@
     el._t = setTimeout(() => { el.hidden = true; }, ms || 3200);
   }
 
+  function withView(href) {
+    if (!APP.role || !href) return href;
+    try {
+      const url = new URL(href, window.location.href);
+      if (url.searchParams.get('action') === 'logout' || url.searchParams.get('action') === 'switch') {
+        return href;
+      }
+      url.searchParams.set('view', APP.role);
+      return url.toString();
+    } catch (e) {
+      return href;
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href]');
+    if (!a || !APP.role) return;
+    const raw = a.getAttribute('href');
+    if (!raw || raw.startsWith('#') || raw.startsWith('mailto:') || raw.startsWith('javascript:')) return;
+    try {
+      const url = new URL(a.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      a.setAttribute('href', withView(url.href));
+    } catch (err) { /* ignore */ }
+  }, true);
+
   async function api(path, options) {
     options = options || {};
     const method = (options.method || 'GET').toUpperCase();
     const headers = Object.assign({}, options.headers || {});
     let body = options.body;
+
+    if (APP.role) {
+      headers['X-App-Role'] = APP.role;
+    }
 
     if (!(body instanceof FormData)) {
       if (body && typeof body === 'object') {
@@ -433,6 +463,52 @@
   window.AppUtil = {
     $, $all, toast, api, escapeHtml, formatDate, truncate, openModal, closeModal,
     confirmDeletePhrase, duplicateNumberPicker, debounce, icons, ImageCache,
-    bindAvatarPicker, bindFileDrop, uploadPatientAvatar, copyText
+    bindAvatarPicker, bindFileDrop, uploadPatientAvatar, copyText, withView
   };
+
+  /**
+   * Ameer Sahab: if the Editor presents a patient while this tab is on
+   * Dashboard / Pending / Gallery / etc., jump to that patient.
+   * The Patients (advisor) page handles this itself without a full reload.
+   */
+  function watchPresentToAmeer() {
+    if (!APP.isAmeer) return;
+    if (/(^|\/)advisor\.php$/i.test(window.location.pathname)) return;
+
+    let primed = false;
+    let lastNonce = null;
+
+    async function poll() {
+      try {
+        const res = await api('active_patient.php?action=get');
+        const state = res.state || {};
+        const forcedId = state.active_patient_id ? Number(state.active_patient_id) : null;
+        const nonce = Number(state.present_nonce || 0);
+
+        if (!primed) {
+          primed = true;
+          lastNonce = nonce;
+          return;
+        }
+
+        const isNewForce = forcedId && nonce !== lastNonce;
+        lastNonce = nonce;
+
+        if (isNewForce) {
+          window.location.href = withView((APP.baseUrl || '') + '/pages/advisor.php?patient=' + forcedId + '&presented=1');
+        }
+      } catch (e) {
+        // keep polling
+      }
+    }
+
+    poll();
+    setInterval(poll, 1500);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', watchPresentToAmeer);
+  } else {
+    watchPresentToAmeer();
+  }
 })();
