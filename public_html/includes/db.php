@@ -36,12 +36,12 @@ function db(): PDO
         http_response_code(500);
         if (str_contains($_SERVER['SCRIPT_NAME'] ?? '', '/api/')) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'error' => 'Database connection failed. Check config/database.php.']);
+            echo json_encode(['success' => false, 'error' => 'Database connection failed.']);
             exit;
         }
         echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Database Error</title></head><body style="font-family:sans-serif;padding:2rem;">';
         echo '<h1>Database connection failed</h1>';
-        echo '<p>Please import <code>database/schema.sql</code> and update <code>config/database.php</code>.</p>';
+        echo '<p>Check the database host, name, username, and password.</p>';
         echo '</body></html>';
         exit;
     }
