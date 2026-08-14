@@ -1,7 +1,7 @@
 <?php
 /**
  * Minimal .env loader (no Composer dependency).
- * Loads ROOT_PATH/.env into putenv / $_ENV if present.
+ * Loads BASE_PATH/.env (one level above public_html) into putenv / $_ENV if present.
  */
 
 declare(strict_types=1);
@@ -14,7 +14,7 @@ function load_env_file(?string $path = null): void
     }
     $loaded = true;
 
-    $path = $path ?: (ROOT_PATH . DIRECTORY_SEPARATOR . '.env');
+    $path = $path ?: (BASE_PATH . DIRECTORY_SEPARATOR . '.env');
     if (!is_file($path) || !is_readable($path)) {
         return;
     }

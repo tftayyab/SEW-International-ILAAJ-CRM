@@ -4,7 +4,7 @@ Everything needed for local **and** deploy lives in **`.env`**. No service-accou
 
 ## Quick path
 
-1. Copy `.env.example` → `.env`
+1. Copy `.env.example` → `.env` in the project root (next to `public_html`, not inside it)
 2. Create Google OAuth **Web client** + enable Drive API
 3. Put `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_DRIVE_FOLDER_ID` in `.env`
 4. As Editor open **Drive Setup** → **Connect Google Drive**

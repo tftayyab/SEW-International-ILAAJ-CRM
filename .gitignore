@@ -1,8 +1,8 @@
 /vendor/
 /uploads/temp/*
 !/uploads/temp/.gitkeep
-/config/credentials/*
-!/config/credentials/.gitkeep
+/public_html/config/credentials/*
+!/public_html/config/credentials/.gitkeep
 composer.lock
 .env
 .env.local

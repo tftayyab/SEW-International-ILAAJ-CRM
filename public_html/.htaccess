@@ -1,0 +1,12 @@
+# Apache helpers (optional)
+Options -Indexes
+
+<FilesMatch "^\.env">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Block direct web access to app internals (vendor/uploads live above public_html)
+  RewriteRule ^(config|includes|lib)/ - [F,L]
+</IfModule>

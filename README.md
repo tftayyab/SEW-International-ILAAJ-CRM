@@ -17,7 +17,7 @@ Editor → **Drive Setup**, or see [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIV
 
 ## Setup
 
-1. **Configure database** in `config/database.php` (host, database name, user, password).
+1. **Copy env** — `.env.example` → `.env` in the project root (next to `public_html`, not inside it). Set database and auth values.
 
 2. **Import schema** (creates database, tables, demo data):
 
@@ -25,7 +25,7 @@ Editor → **Drive Setup**, or see [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIV
 mysql -u root -p < database/schema.sql
 ```
 
-3. **Install PHP dependencies**:
+3. **Install PHP dependencies** from the project root (creates `vendor/` next to `public_html`):
 
 ```bash
 composer install
@@ -34,12 +34,29 @@ composer install
 4. **Run the app**:
 
 ```bash
-php -S localhost:8080
+php -S localhost:8080 -t public_html
 ```
 
 Open http://localhost:8080
 
-Or place the project under your Apache/Nginx document root.
+On XAMPP, open `http://localhost/SEW-International-ILAAJ-CRM/` — requests are rewritten into `public_html`.
+
+## Namecheap / cPanel deploy
+
+Upload so the account home matches this repo layout. `public_html` is the domain document root; `vendor`, `uploads`, and `.env` stay one level above it (not publicly downloadable).
+
+```
+/home/USERNAME/
+  public_html/     website files
+  vendor/          composer packages
+  uploads/         temp import files
+  composer.json
+  .env
+  database/
+  scripts/
+```
+
+On the server, run `composer install` from `/home/USERNAME/` (the folder that contains `composer.json`). Set `GOOGLE_OAUTH_REDIRECT_URI` to `https://your-domain.com/api/google_oauth.php`.
 
 ## Roles (no login)
 
@@ -71,15 +88,20 @@ CSV is supported. Excel `.xlsx` / `.xls` requires PhpSpreadsheet (`composer inst
 ## Project structure
 
 ```
-api/           JSON endpoints
-assets/        CSS & JavaScript
-config/        Database config
-database/      schema.sql
-includes/      Bootstrap, auth, layout
-lib/           Repositories & Excel importer
-pages/         Editor & Advisor UI
-uploads/temp/  Temporary upload storage
-index.php      Role selection landing
+public_html/           Namecheap web root
+  api/                 JSON endpoints
+  assets/              CSS & JavaScript
+  config/              Database config
+  includes/            Bootstrap, auth, layout
+  lib/                 Repositories & Excel importer
+  pages/               Editor & Advisor UI
+  index.php            Role selection landing
+vendor/                Composer packages (not public)
+uploads/temp/          Temporary upload storage (not public)
+composer.json
+.env                   Secrets (not public)
+database/              schema.sql
+scripts/               CLI helpers
 ```
 
 ## Patient deletion

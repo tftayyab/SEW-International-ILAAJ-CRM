@@ -1,8 +1,7 @@
-# Apache helpers (optional)
-Options -Indexes
-
+# Local XAMPP: send all requests into public_html.
+# On Namecheap this file sits above the document root and is unused.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  # Block direct web access to sensitive folders
-  RewriteRule ^(config|includes|lib|vendor|uploads)/ - [F,L]
+  RewriteRule ^public_html/ - [L]
+  RewriteRule ^(.*)$ public_html/$1 [L]
 </IfModule>
