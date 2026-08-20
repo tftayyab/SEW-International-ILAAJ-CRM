@@ -139,6 +139,26 @@ try {
             json_success(['state' => $state]);
             break;
 
+        case 'navigate':
+            require_any_role();
+            $id = (int) input('id');
+            $context = (string) input('context', 'patients');
+            if (!in_array($context, ['patients', 'pending'], true)) {
+                json_error('Invalid list context.');
+            }
+            if (!PatientRepository::find($id)) {
+                json_error('Patient not found.', 404);
+            }
+            $nav = PatientRepository::navigateNeighbor($context, $id, [
+                'q' => input('q'),
+                'page' => (int) input('page', 1),
+                'per_page' => (int) input('per_page', 50),
+                'sort' => input('sort', 'last_activity'),
+                'dir' => input('dir', 'DESC'),
+            ]);
+            json_success(['navigation' => $nav]);
+            break;
+
         default:
             json_error('Unknown action.', 404);
     }

@@ -1,7 +1,12 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, truncate, openModal, closeModal, confirmDeletePhrase, debounce, icons, ImageCache, bindAvatarPicker, uploadPatientAvatar, withView } = AppUtil;
+  const {
+    $, $all, api, toast, escapeHtml, formatDate, truncate, openModal, closeModal,
+    confirmDeletePhrase, debounce, icons, ImageCache, bindAvatarPicker, uploadPatientAvatar,
+    withView, LIST_PER_PAGE, readListContext, syncListUrl, patientDetailUrl
+  } = AppUtil;
 
-  let state = { page: 1, sort: 'last_activity', dir: 'DESC' };
+  let ctx = readListContext('patients');
+  let state = { sort: ctx.sort, dir: ctx.dir };
 
   function filters() {
     const root = $('#patientFilters');
@@ -13,13 +18,21 @@
   }
 
   async function load() {
+    ctx.sort = state.sort;
+    ctx.dir = state.dir;
+    syncListUrl('/pages/patients.php', ctx);
+    if (ctx.q) {
+      const search = $('#patientFilters input[name="q"]');
+      if (search) search.value = ctx.q;
+    }
+
     const f = filters();
     const params = new URLSearchParams({
       action: 'list',
-      page: state.page,
+      page: ctx.page,
       sort: state.sort,
       dir: state.dir,
-      per_page: 20,
+      per_page: LIST_PER_PAGE,
       ...f
     });
     const res = await api('patients.php?' + params.toString());
@@ -27,7 +40,8 @@
   }
 
   const liveLoad = debounce(() => {
-    state.page = 1;
+    ctx.page = 1;
+    ctx.q = ($('#patientFilters input[name="q"]') || {}).value?.trim() || '';
     load().catch((e) => toast(e.message));
   }, 280);
 
@@ -63,7 +77,7 @@
           </tr></thead>
           <tbody>
             ${rows.map((p) => `
-              <tr class="row-link" data-href="${APP.baseUrl}/pages/patient.php?id=${p.id}">
+              <tr class="row-link" data-href="${patientDetailUrl(p.id, ctx)}">
                 <td><div class="cell-primary">${escapeHtml(p.name)}</div><div class="cell-sub">${escapeHtml(p.mother_name || '')}</div></td>
                 <td>${escapeHtml(p.number)}</td>
                 <td>${escapeHtml(p.country || '—')}</td>
@@ -82,7 +96,7 @@
           const tones = ['tone-peach', 'tone-mint', 'tone-sky', 'tone-yellow'];
           const dateText = p.last_activity ? escapeHtml(formatDate(p.last_activity)) : 'No activity';
           return `
-          <div class="info-card mobile-card ${tones[i % tones.length]} row-link" data-href="${APP.baseUrl}/pages/patient.php?id=${p.id}">
+          <div class="info-card mobile-card ${tones[i % tones.length]} row-link" data-href="${patientDetailUrl(p.id, ctx)}">
             <div class="info-card__top">
               <span class="info-card__status is-info">Patient</span>
               <span class="info-card__date">${dateText}</span>
@@ -128,7 +142,7 @@
       <button class="btn btn-secondary btn-sm" ${pagination.page >= pagination.total_pages ? 'disabled' : ''} data-page="${pagination.page + 1}">Next</button>`;
     $all('[data-page]', pg).forEach((b) => {
       b.addEventListener('click', () => {
-        state.page = parseInt(b.dataset.page, 10);
+        ctx.page = parseInt(b.dataset.page, 10);
         load().catch((e) => toast(e.message));
       });
     });
@@ -220,13 +234,13 @@
               await uploadPatientAvatar(created.id, file);
             } catch (upErr) {
               toast('Patient created, but photo upload failed: ' + upErr.message);
-              window.location.href = withView(APP.baseUrl + '/pages/patient.php?id=' + created.id);
+              window.location.href = patientDetailUrl(created.id, ctx);
               return;
             }
           }
           toast(file ? 'Patient created with profile photo.' : 'Patient created.');
           closeModal();
-          window.location.href = withView(APP.baseUrl + '/pages/patient.php?id=' + created.id);
+          window.location.href = patientDetailUrl(created.id, ctx);
         }
       } catch (e) {
         toast(e.message);
@@ -257,7 +271,8 @@
     });
     $('#btnReset').addEventListener('click', () => {
       $all('input', $('#patientFilters')).forEach((i) => { i.value = ''; });
-      state.page = 1;
+      ctx.page = 1;
+      ctx.q = '';
       load().catch((e) => toast(e.message));
     });
     load().catch((e) => toast(e.message));

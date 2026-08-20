@@ -86,19 +86,19 @@ class DashboardStats
         $byCountry = self::rows(
             $pdo,
             "SELECT COALESCE(NULLIF(TRIM(p.country), ''), 'Unknown') AS label, COUNT(*) AS total
-             FROM patients p WHERE {$pWhere} GROUP BY label ORDER BY total DESC LIMIT 10",
+             FROM patients p WHERE {$pWhere} GROUP BY label ORDER BY total DESC",
             $pParams
         );
         $byCity = self::rows(
             $pdo,
             "SELECT COALESCE(NULLIF(TRIM(p.city), ''), 'Unknown') AS label, COUNT(*) AS total
-             FROM patients p WHERE {$pWhere} GROUP BY label ORDER BY total DESC LIMIT 10",
+             FROM patients p WHERE {$pWhere} GROUP BY label ORDER BY total DESC",
             $pParams
         );
         $byOccupation = self::rows(
             $pdo,
             "SELECT COALESCE(NULLIF(TRIM(p.occupation), ''), 'Unknown') AS label, COUNT(*) AS total
-             FROM patients p WHERE {$pWhere} GROUP BY label ORDER BY total DESC LIMIT 10",
+             FROM patients p WHERE {$pWhere} GROUP BY label ORDER BY total DESC",
             $pParams
         );
 
@@ -122,8 +122,7 @@ class DashboardStats
             $pdo,
             "SELECT id, name, meeting_date, location FROM meetings
              WHERE {$meetWhere}
-             ORDER BY meeting_date IS NULL, meeting_date DESC, id DESC
-             LIMIT 5",
+             ORDER BY meeting_date IS NULL, meeting_date DESC, id DESC",
             $meetParams
         );
 

@@ -19,6 +19,10 @@ require ROOT_PATH . '/includes/header.php';
 </div>
 
 <div id="advisorDetailView" hidden>
+    <div class="record-nav-bar">
+        <button type="button" class="btn btn-secondary btn-sm record-nav-bar__btn" id="btnPrevPatient" disabled aria-label="Previous patient">←</button>
+        <button type="button" class="btn btn-secondary btn-sm record-nav-bar__btn" id="btnNextPatient" disabled aria-label="Next patient">→</button>
+    </div>
     <div class="page-header">
         <div>
             <button type="button" class="btn btn-secondary btn-sm" id="btnBackToList">← All patients</button>

@@ -1,6 +1,13 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, debounce, icons, truncate, copyText, withView } = AppUtil;
-  let page = 1;
+  const { $, $all, api, toast, escapeHtml, formatDate, debounce, icons, truncate, copyText, withView, LIST_PER_PAGE, readListContext, syncListUrl } = AppUtil;
+  let ctx = readListContext('meetings');
+
+  function meetingUrl(id) {
+    const q = new URLSearchParams({ id: String(id) });
+    if (ctx.page > 1) q.set('page', String(ctx.page));
+    if (ctx.q) q.set('q', ctx.q);
+    return withView((APP.baseUrl || '') + '/pages/meeting.php?' + q.toString());
+  }
 
   function linkCell(url) {
     const raw = String(url || '').trim();
@@ -28,9 +35,11 @@
   }
 
   async function loadMeetings() {
-    const q = $('#meetingSearch').value.trim();
-    const params = new URLSearchParams({ action: 'list', page, per_page: 20 });
-    if (q) params.set('q', q);
+    syncListUrl('/pages/meetings.php', ctx);
+    if (ctx.q) $('#meetingSearch').value = ctx.q;
+
+    const params = new URLSearchParams({ action: 'list', page: ctx.page, per_page: LIST_PER_PAGE });
+    if (ctx.q) params.set('q', ctx.q);
     const res = await api('meetings.php?' + params.toString());
     const box = $('#meetingsTable');
     if (!res.data.length) {
@@ -44,7 +53,7 @@
           <thead><tr><th>Name</th><th>Date</th><th>Location</th><th>Link</th><th>Patients</th><th class="no-sort"></th></tr></thead>
           <tbody>
             ${res.data.map((m) => `
-              <tr class="row-link" data-href="${APP.baseUrl}/pages/meeting.php?id=${m.id}">
+              <tr class="row-link" data-href="${meetingUrl(m.id)}">
                 <td><div class="cell-primary">${escapeHtml(m.name)}</div></td>
                 <td>${escapeHtml(formatDate(m.meeting_date) || '—')}</td>
                 <td>${escapeHtml(m.location || '—')}</td>
@@ -63,7 +72,7 @@
     $all('.row-link', box).forEach((row) => {
       row.addEventListener('click', (e) => {
         if (e.target.closest('.copy-cell, .icon-actions, a, button')) return;
-        window.location.href = withView(row.dataset.href);
+        window.location.href = row.dataset.href;
       });
     });
     bindCopy(box);
@@ -80,21 +89,33 @@
     const p = res.pagination;
     $('#meetingsPagination').innerHTML = `
       <button class="btn btn-secondary btn-sm" ${p.page <= 1 ? 'disabled' : ''} data-page="${p.page - 1}">Prev</button>
-      <span>Page ${p.page} / ${p.total_pages}</span>
+      <span>Page ${p.page} / ${p.total_pages} (${p.total})</span>
       <button class="btn btn-secondary btn-sm" ${p.page >= p.total_pages ? 'disabled' : ''} data-page="${p.page + 1}">Next</button>`;
     $all('[data-page]', $('#meetingsPagination')).forEach((b) => {
-      b.addEventListener('click', () => { page = parseInt(b.dataset.page, 10); loadMeetings().catch((e) => toast(e.message)); });
+      b.addEventListener('click', () => {
+        ctx.page = parseInt(b.dataset.page, 10);
+        loadMeetings().catch((e) => toast(e.message));
+      });
     });
   }
 
-  const live = debounce(() => { page = 1; loadMeetings().catch((e) => toast(e.message)); }, 280);
+  const live = debounce(() => {
+    ctx.page = 1;
+    ctx.q = $('#meetingSearch').value.trim();
+    loadMeetings().catch((e) => toast(e.message));
+  }, 280);
 
   document.addEventListener('DOMContentLoaded', () => {
+    ctx = readListContext('meetings');
     $('#btnAddMeeting').addEventListener('click', () => {
       window.location.href = withView(APP.baseUrl + '/pages/meeting_form.php');
     });
     $('#meetingSearch').addEventListener('input', live);
-    $('#btnMeetingSearch').addEventListener('click', () => { page = 1; loadMeetings().catch((e) => toast(e.message)); });
+    $('#btnMeetingSearch').addEventListener('click', () => {
+      ctx.page = 1;
+      ctx.q = $('#meetingSearch').value.trim();
+      loadMeetings().catch((e) => toast(e.message));
+    });
     loadMeetings().catch((e) => toast(e.message));
   });
 })();

@@ -460,10 +460,110 @@
     ta.remove();
   }
 
+  const LIST_PER_PAGE = 50;
+
+  function readListContext(defaultFrom) {
+    const p = new URLSearchParams(window.location.search);
+    return {
+      from: p.get('from') || defaultFrom || 'patients',
+      page: Math.max(1, parseInt(p.get('page') || '1', 10)),
+      q: p.get('q') || '',
+      sort: p.get('sort') || 'last_activity',
+      dir: p.get('dir') || 'DESC',
+    };
+  }
+
+  function listContextQuery(ctx) {
+    const q = new URLSearchParams();
+    if (ctx.page > 1) q.set('page', String(ctx.page));
+    if (ctx.q) q.set('q', ctx.q);
+    if (ctx.from === 'patients' || ctx.from === 'advisor') {
+      if (ctx.sort && ctx.sort !== 'last_activity') q.set('sort', ctx.sort);
+      if (ctx.dir && ctx.dir !== 'DESC') q.set('dir', ctx.dir);
+    }
+    const s = q.toString();
+    return s ? '?' + s : '';
+  }
+
+  function syncListUrl(basePath, ctx) {
+    if (!window.history.replaceState) return;
+    const url = (APP.baseUrl || '') + basePath + listContextQuery(ctx);
+    window.history.replaceState({}, '', withView(url));
+  }
+
+  function listReturnUrl(ctx) {
+    if (ctx.from === 'pending') {
+      return withView((APP.baseUrl || '') + '/pages/pending.php' + listContextQuery(ctx));
+    }
+    if (ctx.from === 'advisor') {
+      return withView((APP.baseUrl || '') + '/pages/advisor.php' + listContextQuery(ctx));
+    }
+    return withView((APP.baseUrl || '') + '/pages/patients.php' + listContextQuery(ctx));
+  }
+
+  function backLinkLabel(from) {
+    if (from === 'pending') return '← Pending replies';
+    if (from === 'advisor') return '← All patients';
+    return '← Patients';
+  }
+
+  function patientDetailUrl(id, ctx) {
+    const q = new URLSearchParams({ id: String(id), from: ctx.from });
+    if (ctx.page > 1) q.set('page', String(ctx.page));
+    if (ctx.q) q.set('q', ctx.q);
+    if (ctx.from === 'patients' || ctx.from === 'advisor') {
+      if (ctx.sort && ctx.sort !== 'last_activity') q.set('sort', ctx.sort);
+      if (ctx.dir && ctx.dir !== 'DESC') q.set('dir', ctx.dir);
+    }
+    return withView((APP.baseUrl || '') + '/pages/patient.php?' + q.toString());
+  }
+
+  function advisorDetailUrl(id, ctx) {
+    const q = new URLSearchParams({ patient: String(id), from: ctx.from });
+    if (ctx.page > 1) q.set('page', String(ctx.page));
+    if (ctx.q) q.set('q', ctx.q);
+    return withView((APP.baseUrl || '') + '/pages/advisor.php?' + q.toString());
+  }
+
+  function readPatientNavContext() {
+    const p = new URLSearchParams(window.location.search);
+    const from = p.get('from') === 'pending' ? 'pending' : 'patients';
+    return {
+      from,
+      context: from === 'pending' ? 'pending' : 'patients',
+      page: Math.max(1, parseInt(p.get('page') || '1', 10)),
+      q: p.get('q') || '',
+      sort: p.get('sort') || 'last_activity',
+      dir: p.get('dir') || 'DESC',
+    };
+  }
+
+  async function fetchPatientNeighbors(id, ctx) {
+    const params = new URLSearchParams({
+      action: 'navigate',
+      id: String(id),
+      context: ctx.context,
+      page: String(ctx.page),
+      per_page: String(LIST_PER_PAGE),
+      sort: ctx.sort,
+      dir: ctx.dir,
+    });
+    if (ctx.q) params.set('q', ctx.q);
+    const res = await api('patients.php?' + params.toString());
+    return res.navigation || {};
+  }
+
+  function patientUrlWithPage(id, ctx, page) {
+    return patientDetailUrl(id, Object.assign({}, ctx, { page: page || ctx.page }));
+  }
+
   window.AppUtil = {
     $, $all, toast, api, escapeHtml, formatDate, truncate, openModal, closeModal,
     confirmDeletePhrase, duplicateNumberPicker, debounce, icons, ImageCache,
-    bindAvatarPicker, bindFileDrop, uploadPatientAvatar, copyText, withView
+    bindAvatarPicker, bindFileDrop, uploadPatientAvatar, copyText, withView,
+    LIST_PER_PAGE, readListContext, listContextQuery, syncListUrl, listReturnUrl,
+    backLinkLabel, patientDetailUrl, advisorDetailUrl, readPatientNavContext,
+    fetchPatientNeighbors, patientUrlWithPage
   };
 
   /**

@@ -11,20 +11,45 @@ if (!$patient) {
     redirect(base_url('pages/patients.php'));
 }
 
+$navFrom = ($_GET['from'] ?? '') === 'pending' ? 'pending' : 'patients';
+$backParams = [];
+if ((int) ($_GET['page'] ?? 0) > 1) {
+    $backParams['page'] = (int) $_GET['page'];
+}
+if (!empty($_GET['q'])) {
+    $backParams['q'] = (string) $_GET['q'];
+}
+if ($navFrom === 'patients') {
+    if (!empty($_GET['sort']) && $_GET['sort'] !== 'last_activity') {
+        $backParams['sort'] = (string) $_GET['sort'];
+    }
+    if (!empty($_GET['dir']) && strtoupper((string) $_GET['dir']) !== 'DESC') {
+        $backParams['dir'] = (string) $_GET['dir'];
+    }
+}
+$backBase = $navFrom === 'pending' ? 'pages/pending.php' : 'pages/patients.php';
+$backQs = $backParams ? '?' . http_build_query($backParams) : '';
+$backUrl = with_view(base_url($backBase . $backQs));
+$backLabel = $navFrom === 'pending' ? '← Pending replies' : '← Patients';
+
 $pageTitle = 'Patient';
 $showPageHeading = false;
-$activeNav = 'patients';
+$activeNav = $navFrom === 'pending' ? 'pending' : 'patients';
 $pageScripts = ['patient.js'];
 require ROOT_PATH . '/includes/header.php';
 ?>
+<div class="record-nav-bar">
+    <button type="button" class="btn btn-secondary btn-sm record-nav-bar__btn" id="btnPrevPatient" disabled aria-label="Previous patient">←</button>
+    <button type="button" class="btn btn-secondary btn-sm record-nav-bar__btn" id="btnNextPatient" disabled aria-label="Next patient">→</button>
+</div>
 <div class="page-header">
     <div>
-        <p><a href="<?= e(base_url('pages/patients.php')) ?>">← Patients</a></p>
+        <p><a id="patientBackLink" href="<?= e($backUrl) ?>"><?= e($backLabel) ?></a></p>
     </div>
     <div class="actions">
         <button type="button" class="btn btn-ameer" id="btnSendToAmeer">Present to Ameer Sahab</button>
         <button type="button" class="btn btn-secondary" id="btnEditPatient">Edit details</button>
-        <a class="btn btn-secondary" href="<?= e(base_url('pages/gallery.php?id=' . (int) $patient['id'])) ?>">Open gallery</a>
+        <a class="btn btn-secondary" href="<?= e(with_view(base_url('pages/gallery.php?id=' . (int) $patient['id']))) ?>">Open gallery</a>
         <button type="button" class="btn btn-danger" id="btnDeletePatient">Delete</button>
     </div>
 </div>
