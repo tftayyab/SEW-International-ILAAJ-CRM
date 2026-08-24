@@ -1,20 +1,28 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, truncate, debounce } = AppUtil;
+  const {
+    $, $all, api, toast, escapeHtml, formatDate, truncate, debounce,
+    LIST_PER_PAGE, readListContext, syncListUrl, patientDetailUrl, advisorDetailUrl
+  } = AppUtil;
 
-  let page = 1;
   const isAmeer = !!APP.isAmeer;
-  const patientHref = (id) => isAmeer
-    ? (APP.baseUrl + '/pages/advisor.php?patient=' + id)
-    : (APP.baseUrl + '/pages/patient.php?id=' + id);
+  let ctx = readListContext('pending');
+
+  function patientHref(id) {
+    return isAmeer
+      ? advisorDetailUrl(id, ctx)
+      : patientDetailUrl(id, ctx);
+  }
 
   async function load() {
+    syncListUrl('/pages/pending.php', ctx);
+    if (ctx.q) $('#pendingSearch').value = ctx.q;
+
     const params = new URLSearchParams({
       action: 'pending',
-      page,
-      per_page: 24
+      page: ctx.page,
+      per_page: LIST_PER_PAGE
     });
-    const q = $('#pendingSearch').value.trim();
-    if (q) params.set('q', q);
+    if (ctx.q) params.set('q', ctx.q);
 
     const res = await api('patients.php?' + params.toString());
     const box = $('#pendingCards');
@@ -25,7 +33,6 @@
         (isAmeer ? 'No patients are waiting for your reply.' : 'No patients are awaiting a reply. Nicely done.') +
         '</div>';
     } else {
-      // No profile photos on cards — photo only when the patient page opens
       const tones = ['tone-peach', 'tone-mint', 'tone-sky', 'tone-yellow'];
       box.innerHTML = rows.map((p, i) => {
         const dateText = p.last_message_date
@@ -49,16 +56,17 @@
     const pgn = res.pagination;
     pg.innerHTML = `
       <button class="btn btn-secondary btn-sm" ${pgn.page <= 1 ? 'disabled' : ''} data-page="${pgn.page - 1}">Prev</button>
-      <span>Page ${pgn.page} / ${pgn.total_pages}</span>
+      <span>Page ${pgn.page} / ${pgn.total_pages} (${pgn.total})</span>
       <button class="btn btn-secondary btn-sm" ${pgn.page >= pgn.total_pages ? 'disabled' : ''} data-page="${pgn.page + 1}">Next</button>`;
     $all('[data-page]', pg).forEach((b) => b.addEventListener('click', () => {
-      page = parseInt(b.dataset.page, 10);
+      ctx.page = parseInt(b.dataset.page, 10);
       load().catch((e) => toast(e.message));
     }));
   }
 
   const live = debounce(() => {
-    page = 1;
+    ctx.page = 1;
+    ctx.q = $('#pendingSearch').value.trim();
     load().catch((e) => toast(e.message));
   }, 260);
 

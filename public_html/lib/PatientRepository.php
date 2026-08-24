@@ -150,6 +150,72 @@ class PatientRepository
     }
 
     /**
+     * Previous/next patient within the same list (patients or pending), including across pages.
+     */
+    public static function navigateNeighbor(string $context, int $id, array $filters): array
+    {
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $perPage = max(1, min(100, (int) ($filters['per_page'] ?? 50)));
+
+        $fetch = $context === 'pending'
+            ? static fn(int $p): array => self::pendingResponses(array_merge($filters, ['page' => $p, 'per_page' => $perPage]))
+            : static fn(int $p): array => self::search(array_merge($filters, ['page' => $p, 'per_page' => $perPage]));
+
+        $result = $fetch($page);
+        $ids = array_map('intval', array_column($result['data'], 'id'));
+        $idx = array_search($id, $ids, true);
+        $totalPages = (int) ($result['pagination']['total_pages'] ?? 1);
+        $total = (int) ($result['pagination']['total'] ?? 0);
+
+        if ($idx === false) {
+            return [
+                'prev_id' => null,
+                'next_id' => null,
+                'prev_page' => $page,
+                'next_page' => $page,
+                'position' => null,
+                'total' => $total,
+            ];
+        }
+
+        $prevId = null;
+        $nextId = null;
+        $prevPage = $page;
+        $nextPage = $page;
+
+        if ($idx > 0) {
+            $prevId = $ids[$idx - 1];
+        } elseif ($page > 1) {
+            $prevResult = $fetch($page - 1);
+            $prevRows = $prevResult['data'] ?? [];
+            if ($prevRows) {
+                $prevId = (int) end($prevRows)['id'];
+                $prevPage = $page - 1;
+            }
+        }
+
+        if ($idx < count($ids) - 1) {
+            $nextId = $ids[$idx + 1];
+        } elseif ($page < $totalPages) {
+            $nextResult = $fetch($page + 1);
+            $nextRows = $nextResult['data'] ?? [];
+            if ($nextRows) {
+                $nextId = (int) $nextRows[0]['id'];
+                $nextPage = $page + 1;
+            }
+        }
+
+        return [
+            'prev_id' => $prevId,
+            'next_id' => $nextId,
+            'prev_page' => $prevPage,
+            'next_page' => $nextPage,
+            'position' => (($page - 1) * $perPage) + $idx + 1,
+            'total' => $total,
+        ];
+    }
+
+    /**
      * Unfiltered count of patients awaiting an Ameer Sahab reply.
      */
     public static function pendingCount(): int
@@ -231,5 +297,30 @@ class PatientRepository
             $errors[] = 'Phone number is required.';
         }
         return $errors;
+    }
+
+    /** Distinct country or city values already stored on patients (for autocomplete). */
+    public static function distinctValues(string $field, ?string $q = null, int $limit = 30): array
+    {
+        if (!in_array($field, ['country', 'city'], true)) {
+            return [];
+        }
+
+        $limit = max(1, min($limit, 50));
+        $sql = "SELECT DISTINCT TRIM(p.{$field}) AS value
+            FROM patients p
+            WHERE p.is_archived = 0 AND TRIM(COALESCE(p.{$field}, '')) != ''";
+        $params = [];
+
+        if ($q !== null && trim_str($q) !== '') {
+            $sql .= " AND p.{$field} LIKE ?";
+            $params[] = trim_str($q) . '%';
+        }
+
+        $sql .= ' ORDER BY value ASC LIMIT ' . $limit;
+
+        $stmt = db()->prepare($sql);
+        $stmt->execute($params);
+        return array_column($stmt->fetchAll(), 'value');
     }
 }

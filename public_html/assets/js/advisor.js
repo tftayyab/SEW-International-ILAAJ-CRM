@@ -1,28 +1,34 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, debounce, ImageCache } = AppUtil;
+  const {
+    $, $all, api, toast, escapeHtml, formatDate, debounce, ImageCache, withView,
+    LIST_PER_PAGE, readListContext, syncListUrl, listReturnUrl, backLinkLabel,
+    advisorDetailUrl, fetchPatientNeighbors
+  } = AppUtil;
 
-  let page = 1;
+  let ctx = readListContext('advisor');
   let currentPatientId = null;
   let lastForcedNonce = null;
+  let navCtx = null;
 
   async function loadList() {
     ImageCache.clear();
+    syncListUrl('/pages/advisor.php', ctx);
+    if (ctx.q) $('#advisorSearch').value = ctx.q;
+
     const params = new URLSearchParams({
       action: 'list',
-      page,
-      per_page: 12,
+      page: ctx.page,
+      per_page: LIST_PER_PAGE,
       sort: 'last_activity',
       dir: 'DESC'
     });
-    const q = $('#advisorSearch').value.trim();
-    if (q) params.set('q', q);
+    if (ctx.q) params.set('q', ctx.q);
 
     const res = await api('patients.php?' + params.toString());
     const box = $('#advisorCards');
     if (!res.data.length) {
       box.innerHTML = '<div class="empty-state">No patients found.</div>';
     } else {
-      // Same card design as Pending replies — no images on list cards
       const tones = ['tone-peach', 'tone-mint', 'tone-sky', 'tone-yellow'];
       box.innerHTML = res.data.map((p, i) => {
         const dateText = p.last_activity ? escapeHtml(formatDate(p.last_activity)) : 'No activity';
@@ -50,15 +56,53 @@
     const pgn = res.pagination;
     pg.innerHTML = `
       <button class="btn btn-secondary btn-sm" ${pgn.page <= 1 ? 'disabled' : ''} data-page="${pgn.page - 1}">Prev</button>
-      <span>Page ${pgn.page} / ${pgn.total_pages}</span>
+      <span>Page ${pgn.page} / ${pgn.total_pages} (${pgn.total})</span>
       <button class="btn btn-secondary btn-sm" ${pgn.page >= pgn.total_pages ? 'disabled' : ''} data-page="${pgn.page + 1}">Next</button>`;
     $all('[data-page]', pg).forEach((b) => b.addEventListener('click', () => {
-      page = parseInt(b.dataset.page, 10);
+      ctx.page = parseInt(b.dataset.page, 10);
       loadList().catch((e) => toast(e.message));
     }));
   }
 
-  async function openPatient(id) {
+  function detailNavContext() {
+    return {
+      from: ctx.from,
+      context: ctx.from === 'pending' ? 'pending' : 'patients',
+      page: ctx.page,
+      q: ctx.q,
+      sort: 'last_activity',
+      dir: 'DESC',
+    };
+  }
+
+  async function setupDetailNav(id) {
+    navCtx = detailNavContext();
+    const backBtn = $('#btnBackToList');
+    if (backBtn) backBtn.textContent = backLinkLabel(navCtx.from);
+
+    try {
+      const nav = await fetchPatientNeighbors(id, navCtx);
+      const prevBtn = $('#btnPrevPatient');
+      const nextBtn = $('#btnNextPatient');
+      if (prevBtn) {
+        prevBtn.disabled = !nav.prev_id;
+        prevBtn.onclick = nav.prev_id
+          ? () => { openPatient(nav.prev_id, nav.prev_page).catch((e) => toast(e.message)); }
+          : null;
+      }
+      if (nextBtn) {
+        nextBtn.disabled = !nav.next_id;
+        nextBtn.onclick = nav.next_id
+          ? () => { openPatient(nav.next_id, nav.next_page).catch((e) => toast(e.message)); }
+          : null;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  async function openPatient(id, pageOverride) {
+    if (pageOverride) ctx.page = pageOverride;
     currentPatientId = id;
     ImageCache.clear();
 
@@ -91,7 +135,7 @@
     const gal = $('#btnAdvGallery');
     if (Number(p.image_count) > 0) {
       gal.hidden = false;
-      gal.href = APP.baseUrl + '/pages/gallery.php?id=' + id;
+      gal.href = withView(APP.baseUrl + '/pages/gallery.php?id=' + id);
     } else {
       gal.hidden = true;
       gal.removeAttribute('href');
@@ -109,16 +153,22 @@
         </div>`).join('');
     }
 
+    await setupDetailNav(id);
+
     if (window.history.replaceState) {
-      window.history.replaceState({}, '', APP.baseUrl + '/pages/advisor.php?patient=' + id);
+      window.history.replaceState({}, '', advisorDetailUrl(id, ctx));
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function showList() {
     currentPatientId = null;
+    if (ctx.from === 'pending') {
+      window.location.href = listReturnUrl(ctx);
+      return;
+    }
     if (window.history.replaceState) {
-      window.history.replaceState({}, '', APP.baseUrl + '/pages/advisor.php');
+      window.history.replaceState({}, '', listReturnUrl(ctx));
     }
     $('#advisorDetailView').hidden = true;
     $('#advisorListView').hidden = false;
@@ -127,10 +177,6 @@
     loadList().catch((e) => toast(e.message));
   }
 
-  /**
-   * Only open a patient when the Editor freshly presents one.
-   * On first load we only remember the current forced state — stay on the list.
-   */
   async function pollActive() {
     try {
       const res = await api('active_patient.php?action=get');
@@ -158,18 +204,21 @@
   }
 
   const live = debounce(() => {
-    page = 1;
+    ctx.page = 1;
+    ctx.q = $('#advisorSearch').value.trim();
     loadList().catch((e) => toast(e.message));
   }, 280);
 
   document.addEventListener('DOMContentLoaded', () => {
+    const urlCtx = readListContext('advisor');
+    ctx = urlCtx;
+
     ['advisorSearch', 'advisorCountry', 'advisorCity'].forEach((id) => {
       const el = $('#' + id);
       if (el) el.addEventListener('input', live);
     });
     $('#btnBackToList').addEventListener('click', showList);
 
-    // Always start on the list. Only open a patient if URL has ?patient= (e.g. from gallery back).
     const qPatient = parseInt(new URLSearchParams(window.location.search).get('patient') || '0', 10);
     if (qPatient > 0) {
       openPatient(qPatient).catch((e) => toast(e.message));

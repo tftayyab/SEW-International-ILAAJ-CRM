@@ -42,7 +42,7 @@ $dashYearStart = $dashYear . '-01-01';
                 <h2 style="margin:0">Patients by country</h2>
             </div>
         </div>
-        <div id="chartCountry" class="chart-bars"></div>
+        <div id="chartCountry" class="chart-bars dash-scroll"></div>
     </div>
     <div class="card">
         <div class="card-head">
@@ -50,7 +50,7 @@ $dashYearStart = $dashYear . '-01-01';
                 <h2 style="margin:0">Patients by city</h2>
             </div>
         </div>
-        <div id="chartCity" class="chart-bars"></div>
+        <div id="chartCity" class="chart-bars dash-scroll"></div>
     </div>
 </div>
 
@@ -61,7 +61,7 @@ $dashYearStart = $dashYear . '-01-01';
                 <h2 style="margin:0">Patients by occupation</h2>
             </div>
         </div>
-        <div id="chartOccupation" class="chart-bars"></div>
+        <div id="chartOccupation" class="chart-bars dash-scroll"></div>
     </div>
     <div class="card">
         <div class="card-head">
@@ -69,7 +69,7 @@ $dashYearStart = $dashYear . '-01-01';
                 <h2 style="margin:0">Recent meetings</h2>
             </div>
         </div>
-        <div id="recentMeetings"></div>
+        <div id="recentMeetings" class="dash-scroll"></div>
     </div>
 </div>
 <?php require ROOT_PATH . '/includes/footer.php'; ?>

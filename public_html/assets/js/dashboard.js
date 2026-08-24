@@ -11,7 +11,7 @@
     container.innerHTML = rows.map((r) => {
       const pct = Math.round((Number(r.total) / max) * 100);
       return `<div class="chart-row">
-        <div title="${escapeHtml(r.label)}">${escapeHtml(truncate(r.label, 14))}</div>
+        <div title="${escapeHtml(r.label)}">${escapeHtml(r.label)}</div>
         <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%"></div></div>
         <div>${r.total}</div>
       </div>`;

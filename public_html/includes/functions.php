@@ -39,7 +39,13 @@ function base_url(string $path = ''): string
 
 function asset_url(string $path): string
 {
-    return base_url('assets/' . ltrim($path, '/'));
+    $path = ltrim($path, '/');
+    $url = base_url('assets/' . $path);
+    $file = ROOT_PATH . '/assets/' . $path;
+    if (is_file($file)) {
+        $url .= '?v=' . (string) filemtime($file);
+    }
+    return $url;
 }
 
 function redirect(string $url): void

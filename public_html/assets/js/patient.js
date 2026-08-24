@@ -1,29 +1,94 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, openModal, closeModal, confirmDeletePhrase, ImageCache, bindAvatarPicker, uploadPatientAvatar, withView } = AppUtil;
-  const patientId = parseInt($('#patientHero').dataset.patientId, 10);
+  const {
+    $, $all, api, toast, escapeHtml, formatDate, openModal, closeModal, confirmDeletePhrase,
+    ImageCache, bindAvatarPicker, uploadPatientAvatar, readPatientNavContext,
+    fetchPatientNeighbors, patientUrlWithPage, listReturnUrl
+  } = AppUtil;
 
-  async function loadMessages() {
-    const res = await api('messages.php?action=list&patient_id=' + patientId);
-    const box = $('#conversation');
-    if (!res.messages.length) {
-      box.innerHTML = '<div class="empty-state">This patient has no conversations yet.</div>';
-      return;
-    }
-    box.innerHTML = res.messages.map((m) => `
-      <div class="message-block ${escapeHtml(m.sender_type)}">
-          <div class="message-date">${m.message_date ? escapeHtml(formatDate(m.message_date)) : '<span class="muted">—</span>'}</div>
-        <div class="message-sender">${m.sender_type === 'ameer_sahab' ? 'Ameer Sahab' : 'Patient'}</div>
+  let patientId = parseInt($('#patientHero').dataset.patientId, 10);
+  let navCtx = readPatientNavContext();
+  let messagesCache = [];
+  let activeCompose = null;
+
+  function todayIso() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function senderLabel(type) {
+    return type === 'ameer_sahab' ? 'Ameer Sahab' : 'Patient';
+  }
+
+  function nextSenderType(msgs) {
+    if (!msgs.length) return 'patient';
+    return msgs[0].sender_type === 'patient' ? 'ameer_sahab' : 'patient';
+  }
+
+  function composeBlockHtml(msg) {
+    const sender = msg.sender_type;
+    return `
+      <div class="message-block ${escapeHtml(sender)} message-block--compose" data-compose-id="${msg.id || 'new'}">
+        <div class="message-date">${escapeHtml(formatDate(msg.message_date || todayIso()))}</div>
+        <div class="message-sender">${escapeHtml(senderLabel(sender))}</div>
+        <textarea class="message-compose-input" rows="4" required placeholder="Write the message…">${escapeHtml(msg.message_text || '')}</textarea>
+        <div class="actions message-compose-actions">
+          <button type="button" class="btn btn-sm btn-secondary" data-cancel-compose>Cancel</button>
+          <button type="button" class="btn btn-sm" data-save-compose>Save message</button>
+        </div>
+      </div>`;
+  }
+
+  function viewBlockHtml(m) {
+    return `
+      <div class="message-block ${escapeHtml(m.sender_type)}" data-msg-id="${m.id}">
+        <div class="message-date">${m.message_date ? escapeHtml(formatDate(m.message_date)) : '<span class="muted">—</span>'}</div>
+        <div class="message-sender">${escapeHtml(senderLabel(m.sender_type))}</div>
         <div class="message-text">${escapeHtml(m.message_text)}</div>
         <div class="actions" style="margin-top:0.65rem">
           <button type="button" class="btn btn-sm btn-secondary" data-edit-msg="${m.id}">Edit</button>
           <button type="button" class="btn btn-sm btn-danger" data-del-msg="${m.id}">Delete</button>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+  }
+
+  function renderMessages() {
+    const box = $('#conversation');
+    const parts = [];
+
+    if (activeCompose === 'new') {
+      parts.push(composeBlockHtml({
+        sender_type: nextSenderType(messagesCache),
+        message_date: todayIso(),
+        message_text: '',
+      }));
+    }
+
+    messagesCache.forEach((m) => {
+      if (activeCompose === m.id) {
+        parts.push(composeBlockHtml({
+          id: m.id,
+          sender_type: m.sender_type,
+          message_date: todayIso(),
+          message_text: m.message_text,
+        }));
+      } else {
+        parts.push(viewBlockHtml(m));
+      }
+    });
+
+    if (!parts.length) {
+      box.innerHTML = '<div class="empty-state">This patient has no conversations yet.</div>';
+    } else {
+      box.innerHTML = parts.join('');
+    }
+
+    const composeInput = $('.message-compose-input', box);
+    if (composeInput) composeInput.focus();
 
     $all('[data-edit-msg]', box).forEach((btn) => {
-      const msg = res.messages.find((x) => String(x.id) === btn.dataset.editMsg);
-      btn.addEventListener('click', () => openMessageForm(msg));
+      btn.addEventListener('click', () => {
+        const msg = messagesCache.find((x) => String(x.id) === btn.dataset.editMsg);
+        if (msg) openEditMessage(msg);
+      });
     });
     $all('[data-del-msg]', box).forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -31,52 +96,82 @@
         try {
           await api('messages.php?action=delete', { method: 'POST', body: { id: btn.dataset.delMsg } });
           toast('Message deleted.');
+          activeCompose = null;
           await loadMessages();
         } catch (e) { toast(e.message); }
       });
     });
+    $all('[data-cancel-compose]', box).forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeCompose = null;
+        renderMessages();
+      });
+    });
+    $all('[data-save-compose]', box).forEach((btn) => {
+      btn.addEventListener('click', () => saveCompose(btn.closest('[data-compose-id]')));
+    });
   }
 
-  function openMessageForm(msg) {
-    msg = msg || { sender_type: 'patient', message_date: new Date().toISOString().slice(0, 10) };
-    openModal(`
-      <div class="modal-header">
-        <div>
-          <h2>${msg.id ? 'Edit message' : 'Add message'}</h2>
-        </div>
-        <button type="button" class="btn btn-ghost btn-sm" data-close-modal aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <form id="msgForm" class="form-grid">
-          <input type="hidden" name="id" value="${msg.id || ''}">
-          <div class="field"><label>Sender</label>
-            <select name="sender_type">
-              <option value="patient" ${msg.sender_type === 'patient' ? 'selected' : ''}>Patient</option>
-              <option value="ameer_sahab" ${msg.sender_type === 'ameer_sahab' ? 'selected' : ''}>Ameer Sahab</option>
-            </select>
-          </div>
-          <div class="field"><label>Date</label><input type="date" name="message_date" value="${escapeHtml(msg.message_date || '')}"></div>
-          <div class="field full"><label>Message</label><textarea name="message_text" required placeholder="Write the message…">${escapeHtml(msg.message_text || '')}</textarea></div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-        <button type="button" class="btn" id="saveMsg">Save message</button>
-      </div>
-    `);
-    $('#saveMsg').addEventListener('click', async () => {
-      const form = $('#msgForm');
-      if (!form.reportValidity()) return;
-      const data = Object.fromEntries(new FormData(form).entries());
-      data.patient_id = patientId;
-      try {
-        if (data.id) await api('messages.php?action=update', { method: 'POST', body: data });
-        else await api('messages.php?action=create', { method: 'POST', body: data });
-        closeModal();
-        toast('Message saved.');
-        await loadMessages();
-      } catch (e) { toast(e.message); }
-    });
+  async function saveCompose(block) {
+    if (!block) return;
+    const textarea = $('.message-compose-input', block);
+    const text = textarea.value.trim();
+    if (!text) {
+      textarea.focus();
+      toast('Please enter a message.');
+      return;
+    }
+    const composeId = block.dataset.composeId;
+    const isNew = composeId === 'new';
+    const existing = isNew ? null : messagesCache.find((m) => String(m.id) === composeId);
+    const sender = isNew ? nextSenderType(messagesCache) : existing.sender_type;
+    const data = {
+      patient_id: patientId,
+      sender_type: sender,
+      message_date: todayIso(),
+      message_text: text,
+    };
+    if (!isNew) data.id = existing.id;
+
+    const saveBtn = $('[data-save-compose]', block);
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    try {
+      if (isNew) {
+        await api('messages.php?action=create', { method: 'POST', body: data });
+      } else {
+        await api('messages.php?action=update', { method: 'POST', body: data });
+      }
+      activeCompose = null;
+      toast('Message saved.');
+      await loadMessages();
+    } catch (e) {
+      toast(e.message);
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save message';
+    }
+  }
+
+  function openAddMessage() {
+    if (activeCompose === 'new') {
+      const ta = $('.message-compose-input', $('#conversation'));
+      if (ta) ta.focus();
+      return;
+    }
+    if (activeCompose) return;
+    activeCompose = 'new';
+    renderMessages();
+  }
+
+  function openEditMessage(msg) {
+    activeCompose = msg.id;
+    renderMessages();
+  }
+
+  async function loadMessages() {
+    const res = await api('messages.php?action=list&patient_id=' + patientId);
+    messagesCache = res.messages || [];
+    renderMessages();
   }
 
   async function refreshPatientHeader() {
@@ -185,8 +280,34 @@
     }).catch((e) => toast(e.message));
   }
 
+  async function setupRecordNav() {
+    const back = $('#patientBackLink');
+    if (back) {
+      back.href = listReturnUrl(navCtx);
+    }
+    try {
+      const nav = await fetchPatientNeighbors(patientId, navCtx);
+      const prevBtn = $('#btnPrevPatient');
+      const nextBtn = $('#btnNextPatient');
+      if (prevBtn) {
+        prevBtn.disabled = !nav.prev_id;
+        prevBtn.onclick = nav.prev_id
+          ? () => { window.location.href = patientUrlWithPage(nav.prev_id, navCtx, nav.prev_page); }
+          : null;
+      }
+      if (nextBtn) {
+        nextBtn.disabled = !nav.next_id;
+        nextBtn.onclick = nav.next_id
+          ? () => { window.location.href = patientUrlWithPage(nav.next_id, navCtx, nav.next_page); }
+          : null;
+      }
+    } catch (e) {
+      // keep back link even if neighbors fail
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
-    $('#btnAddMessage').addEventListener('click', () => openMessageForm(null));
+    $('#btnAddMessage').addEventListener('click', openAddMessage);
     $('#btnEditPatient').addEventListener('click', openEditPatient);
     $('#btnSendToAmeer').addEventListener('click', async () => {
       try {
@@ -206,10 +327,11 @@
       try {
         await api('patients.php?action=delete', { method: 'POST', body: { id: patientId, confirm_phrase: 'DELETE THIS PATIENT' } });
         toast('Patient deleted.');
-        window.location.href = withView(APP.baseUrl + '/pages/patients.php');
+        window.location.href = listReturnUrl(navCtx);
       } catch (e) { toast(e.message); }
     });
     ImageCache.loadAll($('#patientHero'));
+    setupRecordNav().catch(() => {});
     loadMessages().catch((e) => toast(e.message));
   });
 })();

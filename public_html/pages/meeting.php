@@ -18,10 +18,20 @@ require ROOT_PATH . '/includes/header.php';
 
 $patientsAttended = count(array_filter($meeting['patients'] ?? [], static fn($p) => !empty($p['attended'])));
 $patientsTotal = count($meeting['patients'] ?? []);
+
+$backParams = [];
+if ((int) ($_GET['page'] ?? 0) > 1) {
+    $backParams['page'] = (int) $_GET['page'];
+}
+if (!empty($_GET['q'])) {
+    $backParams['q'] = (string) $_GET['q'];
+}
+$backQs = $backParams ? '?' . http_build_query($backParams) : '';
+$backUrl = with_view(base_url('pages/meetings.php' . $backQs));
 ?>
 <div class="page-header">
     <div>
-        <p><a href="<?= e(base_url('pages/meetings.php')) ?>">← Meetings</a></p>
+        <p><a href="<?= e($backUrl) ?>">← Meetings</a></p>
     </div>
     <div class="actions">
         <a class="btn btn-secondary" href="<?= e(base_url('pages/meeting_form.php?id=' . (int)$meeting['id'])) ?>">Edit</a>
