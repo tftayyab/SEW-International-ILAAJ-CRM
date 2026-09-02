@@ -7,8 +7,36 @@ declare(strict_types=1);
 
 class PatientRepository
 {
+    public static function ensureResponseSentColumn(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        try {
+            $col = db()->query("SHOW COLUMNS FROM patients LIKE 'response_sent'")->fetch();
+            if (!$col) {
+                db()->exec('ALTER TABLE patients ADD COLUMN response_sent TINYINT(1) NOT NULL DEFAULT 1 AFTER is_archived');
+                db()->exec('UPDATE patients SET response_sent = 1');
+                db()->exec('CREATE INDEX idx_patients_response_sent ON patients (response_sent)');
+            }
+        } catch (Throwable $e) {
+            log_error('ensure response_sent column', $e);
+        }
+    }
+
+    /** Whether the latest Ameer Sahab response is visible to Ameer Sahab. */
+    public static function setResponseSent(int $id, bool $sent): bool
+    {
+        self::ensureResponseSentColumn();
+        $stmt = db()->prepare('UPDATE patients SET response_sent = ? WHERE id = ? AND is_archived = 0');
+        return $stmt->execute([$sent ? 1 : 0, $id]);
+    }
+
     public static function find(int $id, bool $includeArchived = false): ?array
     {
+        self::ensureResponseSentColumn();
         $sql = 'SELECT p.*,
             (SELECT pi.id FROM patient_images pi WHERE pi.patient_id = p.id AND pi.is_profile_picture = 1 LIMIT 1) AS profile_image_id,
             (SELECT pi.image_url FROM patient_images pi WHERE pi.patient_id = p.id AND pi.is_profile_picture = 1 LIMIT 1) AS profile_image_url,
@@ -27,6 +55,7 @@ class PatientRepository
 
     public static function search(array $filters = []): array
     {
+        self::ensureResponseSentColumn();
         $where = ['p.is_archived = 0'];
         $params = [];
 
@@ -115,10 +144,12 @@ class PatientRepository
 
         $whereSql = implode(' AND ', $where);
 
+        // Pending when the latest message is from the patient, or the latest Ameer reply is still unsent.
         $countSql = "SELECT COUNT(*)
             FROM patients p
             JOIN messages last_msg ON last_msg.id = {$lastMsgId}
-            WHERE {$whereSql} AND last_msg.sender_type = 'patient'";
+            WHERE {$whereSql} AND (last_msg.sender_type = 'patient'
+                OR (last_msg.sender_type = 'ameer_sahab' AND p.response_sent = 0))";
         $countStmt = db()->prepare($countSql);
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
@@ -136,7 +167,8 @@ class PatientRepository
             (SELECT pi.image_url FROM patient_images pi WHERE pi.patient_id = p.id AND pi.is_profile_picture = 1 LIMIT 1) AS profile_image_url
             FROM patients p
             JOIN messages last_msg ON last_msg.id = {$lastMsgId}
-            WHERE {$whereSql} AND last_msg.sender_type = 'patient'
+            WHERE {$whereSql} AND (last_msg.sender_type = 'patient'
+                OR (last_msg.sender_type = 'ameer_sahab' AND p.response_sent = 0))
             ORDER BY last_msg.message_date IS NULL,
                      last_msg.message_date DESC,
                      last_msg.import_order DESC,
@@ -226,8 +258,64 @@ class PatientRepository
         $sql = "SELECT COUNT(*)
             FROM patients p
             JOIN messages last_msg ON last_msg.id = {$lastMsgId}
-            WHERE p.is_archived = 0 AND last_msg.sender_type = 'patient'";
+            WHERE p.is_archived = 0 AND (last_msg.sender_type = 'patient'
+                OR (last_msg.sender_type = 'ameer_sahab' AND p.response_sent = 0))";
         return (int) db()->query($sql)->fetchColumn();
+    }
+
+    /**
+     * Patients with an unsent Ameer Sahab response (response_sent = 0).
+     */
+    public static function unsentResponses(array $filters = []): array
+    {
+        self::ensureResponseSentColumn();
+        $where = ['p.is_archived = 0', 'p.response_sent = 0'];
+        $params = [];
+
+        if (!empty($filters['q'])) {
+            $q = '%' . $filters['q'] . '%';
+            $where[] = '(p.name LIKE ? OR p.mother_name LIKE ? OR p.number LIKE ?)';
+            array_push($params, $q, $q, $q);
+        }
+
+        $lastAmeerMsg = "(SELECT m.id FROM messages m WHERE m.patient_id = p.id AND m.sender_type = 'ameer_sahab'
+            ORDER BY m.message_date IS NULL, m.message_date DESC, m.import_order DESC, m.id DESC
+            LIMIT 1)";
+
+        $whereSql = implode(' AND ', $where);
+
+        $countSql = "SELECT COUNT(*) FROM patients p WHERE {$whereSql}";
+        $countStmt = db()->prepare($countSql);
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        $page = (int) ($filters['page'] ?? 1);
+        $perPage = (int) ($filters['per_page'] ?? 24);
+        $pager = paginate($total, $page, $perPage);
+
+        $sql = "SELECT p.id, p.name, p.number, p.response_sent,
+            ameer_msg.message_text AS response_text,
+            ameer_msg.message_date AS response_date,
+            COALESCE(ameer_msg.message_date, DATE(ameer_msg.created_at)) AS last_activity
+            FROM patients p
+            LEFT JOIN messages ameer_msg ON ameer_msg.id = {$lastAmeerMsg}
+            WHERE {$whereSql}
+            ORDER BY ameer_msg.message_date IS NULL,
+                     ameer_msg.message_date DESC,
+                     ameer_msg.import_order DESC,
+                     ameer_msg.id DESC,
+                     p.id DESC
+            LIMIT {$pager['per_page']} OFFSET {$pager['offset']}";
+        $stmt = db()->prepare($sql);
+        $stmt->execute($params);
+
+        return ['data' => $stmt->fetchAll(), 'pagination' => $pager];
+    }
+
+    public static function unsentCount(): int
+    {
+        self::ensureResponseSentColumn();
+        return (int) db()->query('SELECT COUNT(*) FROM patients WHERE is_archived = 0 AND response_sent = 0')->fetchColumn();
     }
 
     public static function findByNumber(string $number): array

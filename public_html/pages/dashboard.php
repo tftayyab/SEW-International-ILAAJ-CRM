@@ -66,10 +66,13 @@ $dashYearStart = $dashYear . '-01-01';
     <div class="card">
         <div class="card-head">
             <div>
-                <h2 style="margin:0">Recent meetings</h2>
+                <h2 style="margin:0">Unsend response</h2>
             </div>
+            <?php if (is_editor()): ?>
+            <a class="btn btn-sm btn-secondary" href="<?= e(with_view(base_url('pages/unsend.php'))) ?>">View all</a>
+            <?php endif; ?>
         </div>
-        <div id="recentMeetings" class="dash-scroll"></div>
+        <div id="recentUnsent" class="dash-scroll"></div>
     </div>
 </div>
 <?php require ROOT_PATH . '/includes/footer.php'; ?>

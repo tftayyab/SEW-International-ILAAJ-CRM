@@ -11,7 +11,7 @@ if (!$patient) {
     redirect(base_url('pages/patients.php'));
 }
 
-$navFrom = ($_GET['from'] ?? '') === 'pending' ? 'pending' : 'patients';
+$navFrom = ($_GET['from'] ?? '') === 'pending' ? 'pending' : (($_GET['from'] ?? '') === 'unsend' ? 'unsend' : 'patients');
 $backParams = [];
 if ((int) ($_GET['page'] ?? 0) > 1) {
     $backParams['page'] = (int) $_GET['page'];
@@ -27,14 +27,26 @@ if ($navFrom === 'patients') {
         $backParams['dir'] = (string) $_GET['dir'];
     }
 }
-$backBase = $navFrom === 'pending' ? 'pages/pending.php' : 'pages/patients.php';
+$backBase = match ($navFrom) {
+    'pending' => 'pages/pending.php',
+    'unsend' => 'pages/unsend.php',
+    default => 'pages/patients.php',
+};
 $backQs = $backParams ? '?' . http_build_query($backParams) : '';
 $backUrl = with_view(base_url($backBase . $backQs));
-$backLabel = $navFrom === 'pending' ? '← Pending replies' : '← Patients';
+$backLabel = match ($navFrom) {
+    'pending' => '← Pending replies',
+    'unsend' => '← Unsend response',
+    default => '← Patients',
+};
 
 $pageTitle = 'Patient';
 $showPageHeading = false;
-$activeNav = $navFrom === 'pending' ? 'pending' : 'patients';
+$activeNav = match ($navFrom) {
+    'pending' => 'pending',
+    'unsend' => 'unsend',
+    default => 'patients',
+};
 $pageScripts = ['patient.js'];
 require ROOT_PATH . '/includes/header.php';
 ?>
@@ -54,7 +66,7 @@ require ROOT_PATH . '/includes/header.php';
     </div>
 </div>
 
-<div class="patient-hero" id="patientHero" data-patient-id="<?= (int) $patient['id'] ?>">
+<div class="patient-hero" id="patientHero" data-patient-id="<?= (int) $patient['id'] ?>" data-response-sent="<?= !empty($patient['response_sent']) ? '1' : '0' ?>">
     <?php if (!empty($patient['profile_image_id'])): ?>
         <img class="avatar-lg img-loading" data-image-id="<?= (int) $patient['profile_image_id'] ?>" alt="">
     <?php endif; ?>

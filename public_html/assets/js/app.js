@@ -619,6 +619,9 @@
     if (ctx.from === 'pending') {
       return withView((APP.baseUrl || '') + '/pages/pending.php' + listContextQuery(ctx));
     }
+    if (ctx.from === 'unsend') {
+      return withView((APP.baseUrl || '') + '/pages/unsend.php' + listContextQuery(ctx));
+    }
     if (ctx.from === 'advisor') {
       return withView((APP.baseUrl || '') + '/pages/advisor.php' + listContextQuery(ctx));
     }
@@ -627,6 +630,7 @@
 
   function backLinkLabel(from) {
     if (from === 'pending') return '← Pending replies';
+    if (from === 'unsend') return '← Unsend response';
     if (from === 'advisor') return '← All patients';
     return '← Patients';
   }
@@ -651,7 +655,8 @@
 
   function readPatientNavContext() {
     const p = new URLSearchParams(window.location.search);
-    const from = p.get('from') === 'pending' ? 'pending' : 'patients';
+    const fromParam = p.get('from') || 'patients';
+    const from = fromParam === 'pending' ? 'pending' : (fromParam === 'unsend' ? 'unsend' : 'patients');
     return {
       from,
       context: from === 'pending' ? 'pending' : 'patients',

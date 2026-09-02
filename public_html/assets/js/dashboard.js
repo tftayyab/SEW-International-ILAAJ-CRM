@@ -1,5 +1,5 @@
 (function () {
-  const { $, api, toast, escapeHtml, formatDate, truncate } = AppUtil;
+  const { $, api, toast, escapeHtml, formatDate, truncate, withView } = AppUtil;
   const isEditor = !!APP.isEditor;
 
   function bars(rows, container) {
@@ -18,12 +18,15 @@
     }).join('');
   }
 
-  function statCard({ tone = 'mint', label, value, foot = '', valueClass = '' }) {
-    return `<div class="stat-card tone-${tone}">
+  function statCard({ tone = 'mint', label, value, foot = '', valueClass = '', href = '' }) {
+    const inner = `
       <div class="label">${escapeHtml(label)}</div>
       <div class="value ${valueClass}">${value}</div>
-      ${foot ? `<div class="foot">${foot}</div>` : ''}
-    </div>`;
+      ${foot ? `<div class="foot">${foot}</div>` : ''}`;
+    if (href) {
+      return `<a class="stat-card stat-card--link tone-${tone}" href="${escapeHtml(href)}">${inner}</a>`;
+    }
+    return `<div class="stat-card tone-${tone}">${inner}</div>`;
   }
 
   function filterParams() {
@@ -109,7 +112,15 @@
         label: 'Pending replies',
         value: t.pending_replies,
         valueClass: 'value-warm',
+        href: withView(APP.baseUrl + '/pages/pending.php'),
       }),
+      ...(isEditor ? [statCard({
+        tone: 'lavender',
+        label: 'Unsent responses',
+        value: t.unsent_replies || 0,
+        valueClass: (t.unsent_replies || 0) > 0 ? 'value-warm' : '',
+        href: withView(APP.baseUrl + '/pages/unsend.php'),
+      })] : []),
       statCard({
         tone: 'sky',
         label: 'Meetings',
@@ -121,15 +132,15 @@
     bars(res.stats.by_city, $('#chartCity'));
     bars(res.stats.by_occupation, $('#chartOccupation'));
 
-    const meetings = res.stats.recent_meetings;
-    $('#recentMeetings').innerHTML = meetings.length
-      ? `<ul>${meetings.map((m) => {
-          const label = `${escapeHtml(m.name)} — ${escapeHtml(formatDate(m.meeting_date) || '—')}`;
+    const unsent = res.stats.recent_unsent || [];
+    $('#recentUnsent').innerHTML = unsent.length
+      ? `<ul>${unsent.map((p) => {
+          const label = `${escapeHtml(p.name)} — ${escapeHtml(p.number)}`;
           return isEditor
-            ? `<li><a href="${APP.baseUrl}/pages/meeting.php?id=${m.id}">${label}</a></li>`
+            ? `<li><a href="${APP.baseUrl}/pages/patient.php?id=${p.id}&from=unsend">${label}</a></li>`
             : `<li>${label}</li>`;
         }).join('')}</ul>`
-      : '<div class="empty-state">No meetings yet.</div>';
+      : '<div class="empty-state">No unsent responses.</div>';
   }
 
   document.addEventListener('DOMContentLoaded', () => {

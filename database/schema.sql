@@ -35,6 +35,7 @@ CREATE TABLE patients (
   occupation VARCHAR(150) NULL,
   notes TEXT NULL,
   is_archived TINYINT(1) NOT NULL DEFAULT 0,
+  response_sent TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_patients_number (number),
@@ -44,6 +45,7 @@ CREATE TABLE patients (
   INDEX idx_patients_city (city),
   INDEX idx_patients_occupation (occupation),
   INDEX idx_patients_archived (is_archived),
+  INDEX idx_patients_response_sent (response_sent),
   INDEX idx_patients_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

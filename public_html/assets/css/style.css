@@ -651,6 +651,18 @@ code { font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.9
 .stat-card.tone-yellow { --blob: var(--blob-yellow); --blob-alt: var(--blob-peach); }
 .stat-card.tone-lavender { --blob: var(--blob-lavender); --blob-alt: var(--blob-sky); }
 .stat-card.tone-peach { --blob: var(--blob-peach); --blob-alt: var(--blob-pink); }
+.stat-card--link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.stat-card--link:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+  text-decoration: none;
+  color: inherit;
+}
 
 /* ---------- Forms ---------- */
 .form-grid {
@@ -739,6 +751,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ---------- Buttons ---------- */
+[hidden] { display: none !important; }
 .btn {
   display: inline-flex;
   align-items: center;
@@ -1769,6 +1782,33 @@ body.role-editor .mobile-card .info-card__name {
 
 .dash-scroll li {
   margin-bottom: 0.45rem;
+}
+
+/* Unsend response list */
+.unsend-table {
+  table-layout: fixed;
+  width: 100%;
+}
+.unsend-table th:nth-child(1),
+.unsend-table td:nth-child(1) {
+  width: 12%;
+}
+.unsend-table th:nth-child(2),
+.unsend-table td:nth-child(2) {
+  width: 9%;
+}
+.unsend-table th:nth-child(4),
+.unsend-table td:nth-child(4) {
+  width: 5.5rem;
+}
+.unsend-table td {
+  vertical-align: top;
+}
+.unsend-table .unsend-response {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+  color: var(--ink-soft);
 }
 
 .record-nav-bar {

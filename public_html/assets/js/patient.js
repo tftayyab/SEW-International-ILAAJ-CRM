@@ -9,6 +9,60 @@
   let navCtx = readPatientNavContext();
   let messagesCache = [];
   let activeCompose = null;
+  let responseSent = $('#patientHero').dataset.responseSent !== '0';
+
+  function hasAmeerResponse() {
+    return messagesCache.some((m) => m.sender_type === 'ameer_sahab');
+  }
+
+  function syncResponseSentButton() {
+    let btn = $('#btnToggleResponseSent');
+    if (!hasAmeerResponse()) {
+      if (btn) btn.remove();
+      return;
+    }
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'btnToggleResponseSent';
+      btn.addEventListener('click', () => {
+        toggleResponseSent().catch((e) => toast(e.message));
+      });
+      const anchor = $('#btnSendToAmeer');
+      anchor.parentNode.insertBefore(btn, anchor);
+    }
+    if (responseSent) {
+      btn.textContent = 'Unsend response';
+      btn.className = 'btn btn-secondary';
+    } else {
+      btn.textContent = 'Send response';
+      btn.className = 'btn';
+    }
+  }
+
+  async function toggleResponseSent() {
+    const btn = $('#btnToggleResponseSent');
+    if (!btn) return;
+    const nextSent = !responseSent;
+    btn.disabled = true;
+    const prevLabel = btn.textContent;
+    btn.textContent = nextSent ? 'Sending…' : 'Unsending…';
+    try {
+      const res = await api('patients.php?action=set_response_sent', {
+        method: 'POST',
+        body: { id: patientId, sent: nextSent },
+      });
+      responseSent = !!Number(res.patient?.response_sent);
+      $('#patientHero').dataset.responseSent = responseSent ? '1' : '0';
+      toast(responseSent ? 'Response sent to Ameer Sahab.' : 'Response unsent.');
+      syncResponseSentButton();
+    } catch (e) {
+      toast(e.message);
+      btn.textContent = prevLabel;
+    } finally {
+      btn.disabled = false;
+    }
+  }
 
   function todayIso() {
     return new Date().toISOString().slice(0, 10);
@@ -98,6 +152,7 @@
           toast('Message deleted.');
           activeCompose = null;
           await loadMessages();
+          await refreshResponseSentState();
         } catch (e) { toast(e.message); }
       });
     });
@@ -110,6 +165,7 @@
     $all('[data-save-compose]', box).forEach((btn) => {
       btn.addEventListener('click', () => saveCompose(btn.closest('[data-compose-id]')));
     });
+    syncResponseSentButton();
   }
 
   async function saveCompose(block) {
@@ -144,6 +200,10 @@
       }
       activeCompose = null;
       toast('Message saved.');
+      if (sender === 'ameer_sahab') {
+        responseSent = false;
+        $('#patientHero').dataset.responseSent = '0';
+      }
       await loadMessages();
     } catch (e) {
       toast(e.message);
@@ -172,6 +232,17 @@
     const res = await api('messages.php?action=list&patient_id=' + patientId);
     messagesCache = res.messages || [];
     renderMessages();
+  }
+
+  async function refreshResponseSentState() {
+    try {
+      const res = await api('patients.php?action=get&id=' + patientId);
+      responseSent = !!Number(res.patient?.response_sent);
+      $('#patientHero').dataset.responseSent = responseSent ? '1' : '0';
+      syncResponseSentButton();
+    } catch (e) {
+      // ignore
+    }
   }
 
   async function refreshPatientHeader() {
@@ -332,6 +403,6 @@
     });
     ImageCache.loadAll($('#patientHero'));
     setupRecordNav().catch(() => {});
-    loadMessages().catch((e) => toast(e.message));
+    loadMessages().then(() => refreshResponseSentState()).catch((e) => toast(e.message));
   });
 })();

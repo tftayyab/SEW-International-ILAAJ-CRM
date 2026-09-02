@@ -14,7 +14,7 @@ try {
             if (!PatientRepository::find($patientId)) {
                 json_error('Patient not found.', 404);
             }
-            json_success(['messages' => MessageRepository::forPatient($patientId)]);
+            json_success(['messages' => MessageRepository::forPatient($patientId, is_ameer())]);
             break;
 
         case 'create':
@@ -34,6 +34,9 @@ try {
                 json_error('Patient not found.', 404);
             }
             $id = MessageRepository::create($data);
+            if ($data['sender_type'] === 'ameer_sahab') {
+                PatientRepository::setResponseSent((int) $data['patient_id'], false);
+            }
             json_success(['id' => $id, 'message' => MessageRepository::find($id)], 201);
             break;
 
@@ -55,6 +58,9 @@ try {
                 json_error(implode(' ', $errors), 422, ['errors' => $errors]);
             }
             MessageRepository::update($id, $data);
+            if ($data['sender_type'] === 'ameer_sahab') {
+                PatientRepository::setResponseSent((int) $existing['patient_id'], false);
+            }
             json_success(['message' => MessageRepository::find($id)]);
             break;
 
@@ -62,10 +68,18 @@ try {
             require_editor();
             require_csrf();
             $id = (int) input('id');
-            if (!MessageRepository::find($id)) {
+            $existing = MessageRepository::find($id);
+            if (!$existing) {
                 json_error('Message not found.', 404);
             }
             MessageRepository::delete($id);
+            if ($existing['sender_type'] === 'ameer_sahab') {
+                $patientId = (int) $existing['patient_id'];
+                $remaining = MessageRepository::forPatient($patientId);
+                if (!$remaining || $remaining[0]['sender_type'] !== 'ameer_sahab') {
+                    PatientRepository::setResponseSent($patientId, true);
+                }
+            }
             json_success(['message' => 'Message deleted.']);
             break;
 

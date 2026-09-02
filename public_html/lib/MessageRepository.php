@@ -7,12 +7,22 @@ declare(strict_types=1);
 
 class MessageRepository
 {
-    public static function forPatient(int $patientId): array
+    public static function forPatient(int $patientId, bool $hideUnsentAmeer = false): array
     {
         $stmt = db()->prepare('SELECT * FROM messages WHERE patient_id = ?
             ORDER BY message_date IS NULL, message_date DESC, import_order DESC, id DESC');
         $stmt->execute([$patientId]);
-        return $stmt->fetchAll();
+        $messages = $stmt->fetchAll();
+
+        if ($hideUnsentAmeer && $messages) {
+            PatientRepository::ensureResponseSentColumn();
+            $patient = PatientRepository::find($patientId);
+            if ($patient && empty($patient['response_sent']) && $messages[0]['sender_type'] === 'ameer_sahab') {
+                array_shift($messages);
+            }
+        }
+
+        return $messages;
     }
 
     public static function find(int $id): ?array

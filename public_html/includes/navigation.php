@@ -26,6 +26,12 @@ $editorLinks = [
         'icon'  => 'inbox',
     ],
     [
+        'key'   => 'unsend',
+        'label' => 'Unsend response',
+        'href'  => with_view(base_url('pages/unsend.php')),
+        'icon'  => 'undo',
+    ],
+    [
         'key'   => 'meetings',
         'label' => 'Meetings',
         'href'  => with_view(base_url('pages/meetings.php')),
@@ -69,12 +75,17 @@ $ameerLinks = [
 $links = is_editor() ? $editorLinks : (is_ameer() ? $ameerLinks : []);
 
 $pendingLeft = 0;
+$unsendLeft = 0;
 if ($links) {
     try {
         require_once ROOT_PATH . '/lib/PatientRepository.php';
         $pendingLeft = PatientRepository::pendingCount();
+        if (is_editor()) {
+            $unsendLeft = PatientRepository::unsentCount();
+        }
     } catch (Throwable $e) {
         $pendingLeft = 0;
+        $unsendLeft = 0;
     }
 }
 
@@ -104,6 +115,8 @@ function nav_icon(string $name): string
         'upload' => '<path d="M12 4v11M7 9l5-5 5 5" ' . $stroke . '/>'
                 . '<path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" ' . $stroke . '/>',
         'cloud' => '<path d="M7 18h10a4 4 0 0 0 .8-7.9 6 6 0 0 0-11.6 1A3.5 3.5 0 0 0 7 18z" ' . $stroke . '/>',
+        'undo' => '<path d="M9 14 4 9l5-5" ' . $stroke . '/>'
+                . '<path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" ' . $stroke . '/>',
         'logout' => '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" ' . $stroke . '/>'
                 . '<path d="M10 8l-4 4 4 4M6 12h11" ' . $stroke . '/>',
     ];
@@ -125,8 +138,19 @@ function nav_icon(string $name): string
         <?php foreach ($links as $link): ?>
             <?php
             $isPending = $link['key'] === 'pending';
-            $badgeLabel = ($isPending && $pendingLeft > 0) ? ($pendingLeft > 9 ? '9+' : (string) $pendingLeft) : '';
-            $aria = $link['label'] . ($isPending && $pendingLeft > 0 ? ', ' . $pendingLeft . ' pending' : '');
+            $isUnsend = $link['key'] === 'unsend';
+            $badgeLabel = '';
+            if ($isPending && $pendingLeft > 0) {
+                $badgeLabel = $pendingLeft > 9 ? '9+' : (string) $pendingLeft;
+            } elseif ($isUnsend && $unsendLeft > 0) {
+                $badgeLabel = $unsendLeft > 9 ? '9+' : (string) $unsendLeft;
+            }
+            $aria = $link['label'];
+            if ($isPending && $pendingLeft > 0) {
+                $aria .= ', ' . $pendingLeft . ' pending';
+            } elseif ($isUnsend && $unsendLeft > 0) {
+                $aria .= ', ' . $unsendLeft . ' unsent';
+            }
             ?>
             <a href="<?= e($link['href']) ?>"
                class="sidebar-item <?= $activeNav === $link['key'] ? 'active' : '' ?>"

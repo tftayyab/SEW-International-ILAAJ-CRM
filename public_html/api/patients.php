@@ -170,6 +170,32 @@ try {
             ]);
             break;
 
+        case 'unsent':
+            require_editor();
+            $result = PatientRepository::unsentResponses([
+                'q' => input('q'),
+                'page' => (int) input('page', 1),
+                'per_page' => (int) input('per_page', 24),
+            ]);
+            json_success($result);
+            break;
+
+        case 'set_response_sent':
+            require_editor();
+            require_csrf();
+            $id = (int) input('id');
+            if (!PatientRepository::find($id)) {
+                json_error('Patient not found.', 404);
+            }
+            $sentRaw = input('sent');
+            if ($sentRaw === null || $sentRaw === '') {
+                json_error('Sent value is required.');
+            }
+            $sent = !in_array($sentRaw, [false, 0, '0', 'false'], true);
+            PatientRepository::setResponseSent($id, $sent);
+            json_success(['patient' => PatientRepository::find($id)]);
+            break;
+
         default:
             json_error('Unknown action.', 404);
     }

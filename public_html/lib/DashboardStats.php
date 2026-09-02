@@ -5,6 +5,8 @@
 
 declare(strict_types=1);
 
+require_once ROOT_PATH . '/lib/PatientRepository.php';
+
 class DashboardStats
 {
     public static function all(array $filters = []): array
@@ -58,10 +60,19 @@ class DashboardStats
 
         $pendingSql = "SELECT COUNT(*) FROM patients p
             WHERE p.is_archived = 0
-              AND (SELECT m.sender_type FROM messages m
+              AND (
+                (SELECT m.sender_type FROM messages m
                     WHERE m.patient_id = p.id
                     ORDER BY m.message_date IS NULL, m.message_date DESC, m.import_order DESC, m.id DESC
-                    LIMIT 1) = 'patient'";
+                    LIMIT 1) = 'patient'
+                OR (
+                    (SELECT m.sender_type FROM messages m
+                        WHERE m.patient_id = p.id
+                        ORDER BY m.message_date IS NULL, m.message_date DESC, m.import_order DESC, m.id DESC
+                        LIMIT 1) = 'ameer_sahab'
+                    AND p.response_sent = 0
+                )
+              )";
         $pendingParams = [];
         if ($range) {
             $pendingSql .= " AND (SELECT COALESCE(m.message_date, DATE(m.created_at)) FROM messages m
@@ -126,6 +137,24 @@ class DashboardStats
             $meetParams
         );
 
+        PatientRepository::ensureResponseSentColumn();
+        $unsentReplies = self::count(
+            $pdo,
+            'SELECT COUNT(*) FROM patients WHERE is_archived = 0 AND response_sent = 0'
+        );
+        $recentUnsent = self::rows(
+            $pdo,
+            "SELECT p.id, p.name, p.number,
+                (SELECT m.message_text FROM messages m
+                    WHERE m.patient_id = p.id AND m.sender_type = 'ameer_sahab'
+                    ORDER BY m.message_date IS NULL, m.message_date DESC, m.import_order DESC, m.id DESC
+                    LIMIT 1) AS response_text
+             FROM patients p
+             WHERE p.is_archived = 0 AND p.response_sent = 0
+             ORDER BY p.updated_at DESC, p.id DESC
+             LIMIT 8"
+        );
+
         $imports = self::count($pdo, "SELECT COUNT(*) FROM excel_imports WHERE {$impWhere}", $impParams);
         $lastImport = self::row(
             $pdo,
@@ -142,6 +171,7 @@ class DashboardStats
                 'patient_messages' => $patientMessages,
                 'ameer_messages' => $ameerMessages,
                 'pending_replies' => $pendingReplies,
+                'unsent_replies' => $unsentReplies,
                 'meetings' => $meetings,
                 'with_images' => $withImages,
                 'without_images' => $withoutImages,
@@ -153,6 +183,7 @@ class DashboardStats
             'recent_patients' => $recentPatients,
             'recent_messages' => $recentMessages,
             'recent_meetings' => $recentMeetings,
+            'recent_unsent' => $recentUnsent,
             'last_import' => $lastImport,
             'filter' => [
                 'period' => $range['period'] ?? 'all',
