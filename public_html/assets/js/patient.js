@@ -2,7 +2,7 @@
   const {
     $, $all, api, toast, escapeHtml, formatDate, openModal, closeModal, confirmDeletePhrase,
     ImageCache, bindAvatarPicker, uploadPatientAvatar, readPatientNavContext,
-    fetchPatientNeighbors, patientUrlWithPage, listReturnUrl
+    fetchPatientNeighbors, patientUrlWithPage, listReturnUrl, openWhatsApp
   } = AppUtil;
 
   let patientId = parseInt($('#patientHero').dataset.patientId, 10);
@@ -40,6 +40,15 @@
     }
   }
 
+  function lastAmeerMessageText() {
+    const msg = messagesCache.find((m) => m.sender_type === 'ameer_sahab');
+    return (msg && msg.message_text) ? String(msg.message_text) : '';
+  }
+
+  function patientNumber() {
+    return $('#patientHero').dataset.patientNumber || '';
+  }
+
   async function toggleResponseSent() {
     const btn = $('#btnToggleResponseSent');
     if (!btn) return;
@@ -54,8 +63,19 @@
       });
       responseSent = !!Number(res.patient?.response_sent);
       $('#patientHero').dataset.responseSent = responseSent ? '1' : '0';
-      toast(responseSent ? 'Response sent to Ameer Sahab.' : 'Response unsent.');
+      if (res.patient && res.patient.number) {
+        $('#patientHero').dataset.patientNumber = res.patient.number;
+      }
+      toast(responseSent ? 'Response marked as sent.' : 'Response unsent.');
       syncResponseSentButton();
+      if (nextSent) {
+        const text = lastAmeerMessageText();
+        if (!text) {
+          toast('No Ameer Sahab message to send on WhatsApp.');
+        } else {
+          openWhatsApp(patientNumber(), text);
+        }
+      }
     } catch (e) {
       toast(e.message);
       btn.textContent = prevLabel;
@@ -248,6 +268,7 @@
   async function refreshPatientHeader() {
     const res = await api('patients.php?action=get&id=' + patientId);
     const p = res.patient;
+    $('#patientHero').dataset.patientNumber = p.number || '';
     $('#patientInfo').innerHTML = `
       <div><strong>Patient</strong><span id="patientName">${escapeHtml(p.name)}</span></div>
       <div><strong>Mother</strong><span>${escapeHtml(p.mother_name || '—')}</span></div>

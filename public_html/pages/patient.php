@@ -66,7 +66,7 @@ require ROOT_PATH . '/includes/header.php';
     </div>
 </div>
 
-<div class="patient-hero" id="patientHero" data-patient-id="<?= (int) $patient['id'] ?>" data-response-sent="<?= !empty($patient['response_sent']) ? '1' : '0' ?>">
+<div class="patient-hero" id="patientHero" data-patient-id="<?= (int) $patient['id'] ?>" data-response-sent="<?= !empty($patient['response_sent']) ? '1' : '0' ?>" data-patient-number="<?= e($patient['number']) ?>">
     <?php if (!empty($patient['profile_image_id'])): ?>
         <img class="avatar-lg img-loading" data-image-id="<?= (int) $patient['profile_image_id'] ?>" alt="">
     <?php endif; ?>

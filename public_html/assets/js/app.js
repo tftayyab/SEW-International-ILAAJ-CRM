@@ -686,6 +686,45 @@
     return patientDetailUrl(id, Object.assign({}, ctx, { page: page || ctx.page }));
   }
 
+  /**
+   * Normalize any international phone string for WhatsApp (digits only, with country code).
+   * Handles +, 00, spaces, dashes, parentheses, and other separators.
+   */
+  function normalizeWhatsAppNumber(raw) {
+    let s = String(raw || '').trim();
+    if (!s) return '';
+
+    // 00… international dialing prefix → same as +
+    if (/^00\d/.test(s)) {
+      s = s.slice(2);
+    } else if (s.startsWith('+')) {
+      s = s.slice(1);
+    }
+
+    // Keep digits only (drop spaces, dashes, parentheses, dots, etc.)
+    const digits = s.replace(/\D/g, '');
+    return digits;
+  }
+
+  function whatsappUrl(number, text) {
+    const phone = normalizeWhatsAppNumber(number);
+    if (!phone) return null;
+    const q = new URLSearchParams();
+    if (text) q.set('text', String(text));
+    const qs = q.toString();
+    return 'https://wa.me/' + phone + (qs ? '?' + qs : '');
+  }
+
+  function openWhatsApp(number, text) {
+    const url = whatsappUrl(number, text);
+    if (!url) {
+      toast('Cannot open WhatsApp: invalid phone number.');
+      return false;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return true;
+  }
+
   window.AppUtil = {
     $, $all, toast, api, escapeHtml, formatDate, truncate, openModal, closeModal,
     confirmDeletePhrase, duplicateNumberPicker, debounce, icons, ImageCache,
@@ -693,7 +732,8 @@
     bindLocationFields,
     LIST_PER_PAGE, readListContext, listContextQuery, syncListUrl, listReturnUrl,
     backLinkLabel, patientDetailUrl, advisorDetailUrl, readPatientNavContext,
-    fetchPatientNeighbors, patientUrlWithPage
+    fetchPatientNeighbors, patientUrlWithPage,
+    normalizeWhatsAppNumber, whatsappUrl, openWhatsApp
   };
 
   /**

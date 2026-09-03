@@ -1,7 +1,8 @@
 (function () {
-  const { $, $all, api, toast, escapeHtml, formatDate, debounce, withView, LIST_PER_PAGE, readListContext, syncListUrl } = AppUtil;
+  const { $, $all, api, toast, escapeHtml, debounce, withView, LIST_PER_PAGE, readListContext, syncListUrl, openWhatsApp } = AppUtil;
 
   let ctx = readListContext('unsend');
+  let rowById = {};
 
   function patientUrl(id) {
     return withView((APP.baseUrl || '') + '/pages/patient.php?id=' + id + '&from=unsend');
@@ -21,6 +22,13 @@
     const res = await api('patients.php?' + params.toString());
     const box = $('#unsendTable');
     const rows = res.data || [];
+    rowById = {};
+    rows.forEach((p) => {
+      rowById[String(p.id)] = {
+        number: p.number || '',
+        text: p.response_text || '',
+      };
+    });
 
     if (!rows.length) {
       box.innerHTML = '<div class="empty-state">No unsent responses.</div>';
@@ -49,7 +57,7 @@
         </div>`;
 
       $all('[data-send]', box).forEach((btn) => {
-        btn.addEventListener('click', () => sendResponse(parseInt(btn.dataset.send, 10), btn));
+        btn.addEventListener('click', () => sendResponse(btn));
       });
     }
 
@@ -66,12 +74,21 @@
     });
   }
 
-  async function sendResponse(id, btn) {
+  async function sendResponse(btn) {
+    const id = parseInt(btn.dataset.send, 10);
+    const row = rowById[String(id)] || {};
+    const number = row.number || '';
+    const text = row.text || '';
     btn.disabled = true;
     btn.textContent = 'Sending…';
     try {
       await api('patients.php?action=set_response_sent', { method: 'POST', body: { id, sent: true } });
-      toast('Response sent to Ameer Sahab.');
+      toast('Response marked as sent.');
+      if (!text) {
+        toast('No Ameer Sahab message to send on WhatsApp.');
+      } else {
+        openWhatsApp(number, text);
+      }
       await load();
     } catch (e) {
       toast(e.message);
